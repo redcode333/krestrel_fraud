@@ -101,7 +101,7 @@ def check_mask_consistency():
     number of reports checked.
     """
     checked = 0
-    for raw in sorted(RAW_REPORTS.glob("*.txt")):
+    for raw in sorted(list(RAW_REPORTS.glob("*.txt")) + list(RAW_REPORTS.glob("*.md"))):
         masked = REPORTS / raw.name
         assert masked.exists(), f"reports/raw/{raw.name} has no masked copy in reports/"
         masked_text = masked.read_text(encoding="utf-8")
@@ -111,6 +111,14 @@ def check_mask_consistency():
             "different masked ID than in other reports. Regenerate this report.")
         checked += 1
     return checked
+
+
+def write_masked_file(filename, text):
+    """Write one report file twice: reports/raw/<filename> as given, reports/<filename> with partner IDs masked."""
+    RAW_REPORTS.mkdir(parents=True, exist_ok=True)
+    (RAW_REPORTS / filename).write_text(text, encoding="utf-8")
+    (REPORTS / filename).write_text(mask_partner_ids(text), encoding="utf-8")
+    return check_mask_consistency()
 
 
 class _Tee:
