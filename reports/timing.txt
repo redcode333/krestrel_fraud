@@ -1,0 +1,10 @@
+Scoring time (src/rupees.py). THIS FILE VARIES BETWEEN RUNS AND MACHINES; every other report reproduces exactly.
+
+Measured by scoring 1,000 single claims one at a time through src/scoring.py, after the model files were loaded once.
+
+what was timed                     mean ms    p95 ms  slowest ms
+score only (score_claim)             0.014     0.014       0.408
+score with reasons (explain)         0.086     0.119       0.460
+
+A month of about 750 claims is about 0.06 seconds of computing, reasons included.
+API cost: Rs 0. No paid service or key is used.

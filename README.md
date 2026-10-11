@@ -24,7 +24,7 @@ Wherever this repository counts new outlets (reports, the form text, the explana
 
 ## Reproducibility
 
-Every bootstrap and tie-break uses a fixed seed (`BOOTSTRAP_SEED` in `src/evaluate.py`), so two runs give identical reports, intervals, `predictions.csv` and model files.
+Every bootstrap and tie-break uses a fixed seed (`BOOTSTRAP_SEED` in `src/evaluate.py`), so two runs give identical reports, intervals, `predictions.csv` and model files. **The one exception is `reports/timing.txt`**: it holds the measured scoring time, which depends on the machine and the moment, so that file alone varies between runs.
 
 ## What the review list depends on
 

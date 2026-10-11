@@ -2,7 +2,15 @@
 
 Produced by `src/rupees.py`. It reads the final model and `predictions.csv` as they are and changes neither. Intervals are 90%, from 1,000 resamples of partners with the fixed seed (0). Partner IDs are masked in this copy.
 
-Costs used throughout (policy section 4): a genuine claim held for review costs Rs 380 in goodwill; every reviewed claim costs Rs 260 (a service contact, assumed for every review); a fraudulent claim that is stopped saves its claim amount.
+## Assumptions
+
+Every rupee figure below rests on these. They come from policy section 4 and from one month of validation.
+
+1. **A reviewed fraud is always found.** If the investigation desk reviews a fraudulent claim, it recognises it and the claim is not paid. A desk that misses some would recover less.
+2. **Avoided payout = the claim amount.** Stopping a fraudulent claim saves exactly what was claimed; no recovery costs, no wider deterrent effect.
+3. **Rs 260 per reviewed claim.** The policy's blended cost of a service contact, charged on every review, fraud or genuine.
+4. **Rs 380 per genuine claim held.** The goodwill Kestrel issues when a genuine customer's repair is delayed by a review.
+5. **Average fraud amount Rs 1,469.** The June average of the 13 frauds the review rule caught (June 2026, 14-day lag). Scenario tables use it as the amount saved per fraud found; the test months may differ.
 
 ## A. June 2026, every list, for the final model
 
@@ -69,18 +77,22 @@ The test set has 2,252 claims over three months (July 786, August 730, September
 
 **The 25% scenario loses money** (Rs -19,193 over the quarter): if only a quarter of the reviewed claims are fraud, the goodwill and contact costs outweigh the fraud stopped. **35% is about break-even** (Rs 778 over the quarter). **52%, June's observed rate, pays** (Rs 34,728 over the quarter). The rule earns money only while the flagged outlets keep committing fraud at something like June's rate; it should be re-checked each month against the desk's findings.
 
+## B2a. Sensitivity: what if the flagged outlets commit less fraud than in June?
+
+Quarter net of the review-rule list (108 reviews over July to September) at Rs 1,469 per fraud found. Outlets A and B are singled out because they supply 34 of the 108 reviews and were flagged on only 2 decided claims each, the thinnest evidence on the watchlist (section D). June's observed rate was 52%.
+
+| Fraud rate assumed | Quarter net Rs if only Outlets A and B run at this rate (34 reviews), the other 8 at 52% (74 reviews) | Frauds found in that case | Quarter net Rs if ALL flagged outlets run at this rate (108 reviews) | Frauds found in that case  |
+|---|---|---|---|---|
+| 20% | 14,610 | 45 | -29,178 | 22 |
+| 30% | 20,897 | 49 | -9,207 | 32 |
+| 40% | 27,184 | 52 | 10,763 | 43 |
+| 52% | 34,728 | 56 | 34,728 | 56 |
+
+Break-even for the whole list is 34.6%. If only Outlets A and B disappoint, the list still pays at every rate in the table: even with no fraud at all at those two it would net Rs 2,035 over the quarter, because the other eight outlets carry it at June's rate. If ALL flagged outlets fall to 30% or below the list loses money.
+
 ## B3. What one prediction costs
 
-**API cost: Rs 0.** The model is a small logistic formula run locally; no paid service or key is used at any point.
-
-| What was timed | Mean ms per claim | p95 ms | Slowest ms |
-|---|---|---|---|
-| score only (score_claim) | 0.013 | 0.015 | 0.152 |
-| score with reasons (explain) | 0.086 | 0.139 | 0.287 |
-
-Measured on this machine by scoring 1,000 single claims one at a time through `src/scoring.py`, after the model files were loaded once. These timings vary from run to run and from machine to machine; every other number in this file reproduces exactly.
-
-A month of about 750 claims is therefore about 0.06 seconds of computing with reasons included. Model files: `model.joblib` 1,542 bytes, `constants.json` 5,117 bytes, partner profile 27,056 bytes.
+**API cost: Rs 0.** The model is a small logistic formula run locally; no paid service or key is used at any point. Scoring is under a millisecond per claim; the measured times are in `reports/timing.txt`, the one report that varies between runs. Model files: `model.joblib` 1,542 bytes, `constants.json` 5,117 bytes, partner profile 27,056 bytes.
 
 **This is not the cost of a review.** A review is a person's work and a contact with the customer: Rs 260 for every reviewed claim, plus Rs 380 in goodwill when the claim turns out to be genuine. With up to 40 reviews a month that is up to Rs 10,400 a month in contact cost alone. Scoring all 750 claims is free; reviewing is where the money goes.
 
