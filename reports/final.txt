@@ -1,0 +1,189 @@
+Final model (src/final.py): M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL), Platt-corrected.
+Validation numbers quoted here come from Fold B (score June 2026), the PRIMARY fold; Fold A (score May 2026) is the STRESS TEST of the regime change. M0 (partner_rate_ratio only) is the benchmark.
+
+====================================================================================================
+Calibration: Platt correction fitted on the OUT-OF-SAMPLE Fold B predictions of the same recipe (L = 14)
+====================================================================================================
+Fold B: 713 claims, 22 frauds. The scores being corrected come from a model fitted only on claims before 1 June.
+Platt slope = 1.0172, intercept = 0.5751  (probability = sigmoid(slope x log-odds + intercept))
+The slope is positive, so the correction changes the size of the scores but never their order.
+
+BEFORE the correction (raw model probabilities):
+ decile (1 = lowest score)  claims mean predicted observed fraud rate frauds predicted  frauds observed
+                         1      72         0.0010              0.0000              0.1                0
+                         2      71         0.0017              0.0000              0.1                0
+                         3      71         0.0022              0.0141              0.2                1
+                         4      71         0.0029              0.0000              0.2                0
+                         5      72         0.0041              0.0000              0.3                0
+                         6      71         0.0057              0.0141              0.4                1
+                         7      71         0.0082              0.0141              0.6                1
+                         8      71         0.0130              0.0141              0.9                1
+                         9      71         0.0242              0.0563              1.7                4
+                        10      72         0.1425              0.1944             10.3               14
+whole month: 14.7 frauds predicted against 22 observed; top decile: 10.3 predicted against 14 observed.
+
+AFTER the correction:
+ decile (1 = lowest score)  claims mean predicted observed fraud rate frauds predicted  frauds observed
+                         1      72         0.0016              0.0000              0.1                0
+                         2      71         0.0026              0.0000              0.2                0
+                         3      71         0.0035              0.0141              0.2                1
+                         4      71         0.0047              0.0000              0.3                0
+                         5      72         0.0065              0.0000              0.5                0
+                         6      71         0.0092              0.0141              0.7                1
+                         7      71         0.0134              0.0141              0.9                1
+                         8      71         0.0213              0.0141              1.5                1
+                         9      71         0.0397              0.0563              2.8                4
+                        10      72         0.2044              0.1944             14.7               14
+whole month: 22.0 frauds predicted against 22 observed; top decile: 14.7 predicted against 14 observed.
+
+Where the June under-prediction came from, by kind of partner:
+                                                        claims frauds observed observed rate predicted before shortfall before (observed - predicted) predicted after implied rate after
+(a) partner_rate_ratio > 1 (flagged by the review rule)     25              13         52.0%              6.4                                    +6.6             8.6              34.5%
+(b) partner has decided claims but ratio <= 1              475               5          1.1%              5.5                                    -0.5             8.8               1.9%
+(c) partner has no decided new-regime claim                213               4          1.9%              2.8                                    +1.2             4.6               2.1%
+Before the correction the model was short by 7.3 frauds in total, of which +6.6 among flagged partners. The Platt intercept (+0.58) is one number added to every claim's log-odds, so it also raises the claims of unflagged partners: after it they are predicted 13.4 frauds against 9 observed.
+
+stop-early list on Fold B: before 12 reviews, 5 frauds, net Rs 3,083; after 29 reviews, 9 frauds, net Rs -333.
+CAVEATS: (1) the 'after' tables and the 'after' stop-early number are judged on the same 713 claims the two parameters were fitted on, so they look better than they will be. (2) The correction rests on 22 frauds from 8 partners. (3) The final model has fresher and larger partner history than Fold B at L = 14, so its raw scores are spread differently. Treat the probabilities as INDICATIVE ONLY; the ranking and the partner rule do not depend on them.
+
+====================================================================================================
+Final training: M3-noage on every labelled claim up to 30 Jun 2026, history frozen on 30 Jun 2026 (L = 0)
+====================================================================================================
+model: M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)
+training rows: 11,146 (141 frauds), 2025-04-01 to 2026-06-30
+base features: 18 label-free columns, of which city or partner-type columns: 0; same standardise-then-logistic recipe (C = 1.0) as evaluated in src/train.py
+frozen history: 1,422 decided new-regime claims, 36 frauds; newest label used is from 2026-06-30 23:40:00; ASSERTED: no label dated after 30 Jun 2026 is used (none exist: newest label in the data is 2026-06-30 23:40:00).
+test claims: 2,252, 2026-07-01 to 2026-09-30; their rolling features use only strictly earlier claims from the train, undecided and test files.
+
+largest M3-noage coefficients (per standard deviation of the feature; + raises the score):
+  amount_to_list_price +1.01; customer_prior_claims +0.58; family_Robot Vacuum +0.46; is_small +0.45; is_new_partner +0.44; family_Water Purifier +0.34; family_Room Heater -0.33; family_Ceiling Fan -0.26; partner_claims_last_30d +0.24; claim_amount_inr -0.23
+
+====================================================================================================
+predictions.csv
+====================================================================================================
+wrote predictions.csv: 2,252 rows, columns ['claim_id', 'score'], ids and order as data/sample_submission.csv
+score min 0.00038 / median 0.00572 / p90 0.06894 / p99 0.80962 / max 0.97612; distinct scores: 2,252 of 2,252; NaN: 0; strictly between 0 and 1: True
+Platt parameters applied: slope 1.0172, intercept 0.5751
+sum of scores = expected frauds in the test set: 99.7 (4.43% of claims).
+  sanity reference: 77% small claims x 3.23% + 23% large x 0.30% (May-June rates) = 57.5 frauds; at June's rate alone (3.09%) it would be 69.5.
+  the sum is 1.73x that reference (at or above the sanity target). It is an indication, not a forecast: the correction behind it rests on 22 frauds.
+
+====================================================================================================
+Where the expected frauds sit: sum of final scores by kind of partner
+====================================================================================================
+                                                                               claims share of claims partners sum of scores (expected frauds) share of expected frauds implied fraud rate
+(a) partner_rate_ratio > 1: partner has confirmed fraud above the average rate    112            5.0%       10                            59.6                      60%              53.2%
+(b) partner has decided claims but ratio <= 1                                    2029           90.1%      349                            29.5                      30%               1.5%
+(c) partner has no decided new-regime claim                                       111            4.9%       20                            10.5                      11%               9.5%
+all test claims                                                                  2252          100.0%      379                            99.7                     100%               4.4%
+For scale: May-June had 36 confirmed frauds in 1,422 decided claims; June alone 22 in 713.
+Group (a) is what the review rule looks at. Groups (b) and (c) are where the model expects fraud that the rule will not review; those numbers are sums of small probabilities and are the least reliable part of the total.
+
+====================================================================================================
+Composition of the top 40 and top 100 test claims (by score, all three months together)
+====================================================================================================
+            places in top 40  places in top 100  all test claims partner_rate_ratio history to 30 Jun (frauds / decided claims) group
+partner_id                                                                                                                           
+P077                      10                 12               13               23.5                                     10 / 12   new
+P039                       9                 16               17               12.0                                       2 / 2   new
+P352                       8                 17               17               12.0                                       2 / 2   new
+P170                       4                 13               14               11.6                                       4 / 9   new
+P035                       4                  8               11               16.6                                      7 / 12   new
+P248                       3                 13               15               11.2                                      5 / 13   new
+P356                       2                 10               10                9.5                                       3 / 8   new
+P328                       0                  2               12                1.0                                       0 / 0   new
+P103                       0                  2                8                1.0                                       0 / 0   new
+P284                       0                  1               10                0.7                                       0 / 2   old
+P141                       0                  1                9                0.8                                       0 / 1   new
+P286                       0                  1                4                0.6                                       0 / 4   new
+P069                       0                  1                8                1.0                                       0 / 0   new
+P026                       0                  1               10                1.0                                       0 / 0   new
+P036                       0                  1                4                1.0                                       0 / 0   new
+P310                       0                  1                4                0.6                                       0 / 4   new
+
+                      claims partners under Rs 2,000 median Rs smallest Rs largest Rs partner_rate_ratio > 1 no partner history  Jul / Aug / Sep
+top 40                    40        7            90%     1,646         774      7,494                   100%                 0%     10 / 16 / 14
+top 100                  100       16            89%     1,488         407      7,494                    89%                 7%     30 / 33 / 37
+all 2,252 test claims   2252      379            77%     1,396         250     26,728                     5%                 5%  786 / 730 / 736
+No single partner supplies more than 15 of the top 40 (the largest share is 10).
+
+====================================================================================================
+Benchmarks on the test set: the previous final model (M5-mid), M0 (partner_rate_ratio only) and M3-noage alone
+====================================================================================================
+saved per-claim scores to reports/raw/test_benchmark_scores.csv (git-ignored: claim-level).
+overlap with the PREVIOUS top 40 (M5-mid): 39 of 40 claims; top 100: 99 of 100; rank correlation over all test claims 0.953.
+overlap of the top 40 with M0: 21 claims; with M3-noage alone: 16.
+M0 has 20 distinct scores over 2,252 claims; 34 claims tie at its 40th score, so 16 of its top 40 places are decided by a random tie-break.
+
+====================================================================================================
+Partner rule on the test set: how many claims qualify each month (cap = 40)
+====================================================================================================
+LABEL: rule defined after seeing June; not independently validated; one month, 8 partners.
+        test claims qualify (partner_rate_ratio > 1) from partners would be reviewed (cap 40) cap binds lowest score reviewed
+2026-07         786                               34             9                         34        no                0.1557
+2026-08         730                               34            10                         34        no                0.0104
+2026-09         736                               44            10                         40       YES                0.1019
+In total 112 test claims from 10 partners qualify. Where the cap binds, the claims with the highest score are reviewed and the rest are paid. A month with no qualifying claim gets an EMPTY list: the product says 'no claim meets the review rule this month' and does not pad the list.
+Which claims qualify does not depend on the base model at all: it depends only on which partners have a confirmed fraud record. M5, M5-mid and M5-lite give the same list wherever the cap does not bind; the score only orders it.
+Qualification uses the history frozen on 30 Jun 2026. In live use the history would be refreshed as outcomes arrive; frozen for three months, partners that turn fraudulent after June can never qualify.
+
+====================================================================================================
+Break-even margin of the partner-rule list on Fold B
+====================================================================================================
+LABEL: rule defined after seeing June; not independently validated; one month, 8 partners.
+               reviews frauds average amount of the fraud claims Rs break-even fraud rate = (260 + 380) / (average fraud amount + 380) observed fraud rate in the list margin (points) frauds needed to break even net Rs
+Fold B, L = 14      25     13                                 1,469                                                              34.6%                           52.0%           +17.4                           9  8,039
+Fold B, L = 0       31     16                                 1,367                                                              36.6%                           51.6%           +15.0                          12  8,119
+At L = 14 the list pays as long as at least 9 of its 25 reviews are fraud; it had 13. That is the margin: 4 frauds, in one month, from 8 partners.
+
+====================================================================================================
+Saved artefacts in models/ (partner-level summaries only, no claim rows)
+====================================================================================================
+models/model.joblib: plain numbers only (18 features, their means, scales and coefficients, intercept -5.2170, beta 1.0, Platt slope 1.0172 and intercept 0.5751). Loading it needs numpy and joblib, not scikit-learn.
+models/partner_profile.csv (REAL partner IDs, git-ignored): 380 rows, one per partner; columns ['partner_id', 'is_new_partner', 'age_days_at_profile', 'decided_new_claims', 'new_frauds', 'smoothed_rate', 'rate_ratio', 'claims_last_7d', 'claims_last_30d', 'small_share_last_30d', 'avg_amount_last_30d']
+  frozen history as of 2026-06-30: 360 partners with decided new-regime claims, 10 with confirmed fraud, 10 with partner_rate_ratio > 1; overall new-regime rate 0.0253
+  rolling activity as of 2026-09-30: 316 partners with a claim in the last 30 days
+models/partner_profile.example.csv (committed): the same rows with masked partner IDs and onboarding age rounded down to 30 days. The scorer falls back to it when the real file is missing.
+models/constants.json: costs (Rs 380, Rs 260), expected-value and break-even formulas, the review rule and its label, the product catalogue, the category lists and the cohort statistics quoted in explanations.
+  The ONE definition used everywhere: new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026: 45, of which 8 have a confirmed fraud and 37 have none.
+  new outlets: 34 frauds in 211 decided claims after 1 May (16.1%); established outlets: 2 in 1,211 (0.2%); 37 of 45 new outlets have no confirmed fraud. Before 1 May, 105 of the 105 confirmed frauds came from established outlets.
+src/scoring.py: claim_features(claim) builds the features for ONE claim from the partner profile; score_claim and explain use it. The app must import these and nothing else from the pipeline.
+
+====================================================================================================
+Checks: the one-claim function reproduces predictions.csv, and explanations follow the rules
+====================================================================================================
+PASS: for all 2,252 test claims, the one-claim function given the partner's state at the time of the claim rebuilds every feature (largest difference 0.0e+00) and the score in predictions.csv (largest difference 5.6e-16).
+PASS: 4,504 explanations checked (each claim with its state at the time and with the stored profile). None names a city or a partner type or says 'new partner'; every reason is one of ['auto_approval', 'claim_amount', 'customer', 'outlet_age', 'partner_activity', 'partner_record', 'photo', 'product']; the reasons and the baseline add up to the score.
+Outlet age is explained with one line carrying its group statistics; city and partner type are not in the model at all.
+What the app will do differently: it reads partner activity as of 30 Sep 2026 from the profile, not as of the claim's date. Re-entering an old test claim in the app therefore gives a slightly different score: median difference 0.0011, largest 0.3314, rank correlation with predictions.csv 0.972. predictions.csv is the submission; the app is for new claims.
+
+====================================================================================================
+explain(): three test claims as the app will show them
+====================================================================================================
+Scored with the stored partner profile, as the app does. Claim-level detail is kept out of the committed copy.
+[39 lines of claim-level detail kept out of the committed copy (policy section 10); they are in reports/raw/]
+
+====================================================================================================
+Text for the submission form: what I expect it to score and why (final recipe)
+====================================================================================================
+Final recipe. Score = base log-odds + 1.0 x log(partner_rate_ratio). The base is a logistic regression on 18 label-free claim and partner features; partner_rate_ratio is the partner's confirmed fraud rate since 1 May 2026 relative to the average, and is exactly 1.0 for a partner with no decided claim. It is trained on the 11,146 labelled claims up to 30 Jun 2026 (141 frauds). A decision rule I fixed before running anything chose a simpler benchmark (the ratio alone). I deviated from it and logged why: the benchmark cannot rank the claims of partners without a fraud record, and the intervals do not separate the two.
+
+Validation. On the primary fold (June 2026: 713 claims, 22 frauds from 8 partners; fraud history frozen on 1 June and assumed known after a 14-day investigation lag) the same recipe scores PR-AUC 0.465 (90% interval 0.057 to 0.661) and ROC-AUC 0.884 (0.768 to 0.952). It finds 11 of the 22 frauds in the top 40 (0 to 18) and 15 in the top 100 (4 to 29); picking 40 blind finds about 1.2. The benchmark scores PR-AUC 0.347 and ROC-AUC 0.843 with 13 in the top 40. Intervals come from 1,000 resamples of partners with a fixed seed and are wide because 22 frauds from 8 partners is very little.
+
+What I expect on the Jul-Sep test. A PR-AUC somewhere between about 0.16 and 0.56, with a point guess of 0.30 to 0.35. The range is computed on the June fold: 0.16 is what the label-free part alone scores (the result if partner history stops helping) and 0.56 is the full recipe when every outcome is known at once. The point guess is my judgement, and it is deliberately below the June figure of 0.465: the coefficient of 1.0, the base model (the survivor of four compared on June), the review rule and the calibration were all settled with June in view, and June is the only month I could validate on. That is selection optimism, and I cannot measure its size. A result under 0.16 would mean the fraud pattern has moved again. Accuracy is not a result I report: predicting "not fraud" for every June claim is already 96.91% accurate and catches nothing.
+
+History and lag for the final model. History is frozen on 30 Jun 2026 using every outcome known by then (1,422 decided new-regime claims, 36 frauds), i.e. no lag at the cut-off. The export cannot reveal the real investigation lag. The test runs to 30 Sep, so for the 67% of test claims submitted from 30 July on, every June outcome would be decided even under a 30-day lag; only July claims get somewhat optimistic history. Validation keeps the 14-day lag as the conservative headline (380 decided claims, 8 frauds available); the same fold gives PR-AUC 0.561 with no lag and 0.156 with a 30-day lag, where no history is usable yet. 111 of the 2,252 test claims (4.9%) come from partners with no decided new-regime claim and are scored by the label-free part alone (under a 14-day lag it would be 236).
+
+Why the test could score lower. (1) The history is up to 92 days stale by the end of the test; the oldest history I could validate was 43 days old. (2) The investigation lag is unknown. (3) On the stress-test fold (May 2026, the first month of the new pattern) this recipe scored ROC-AUC 0.062, far below random, as did every fitted model: it had learned the old pattern, which reversed on 1 May. Another shift would hurt the same way. (4) Everything rests on 22 frauds from 8 partners, so the model choice itself could be luck.
+
+Why it could score higher. Fraud was still rising (1.97% of claims in May, 3.09% in June), which lifts PR-AUC. And most of the test is scored with fresher and fuller history than the validation had: 1,422 decided claims with 36 frauds against 380 with 8.
+
+How the outlet-identity question was handled, and what it cost. The first base model had 40 features, 21 of them city and partner-type columns, and some of its largest coefficients were cities. With about ten fraudulent outlets those columns can simply memorise which outlet is which. I changed the base model three times, each time against a rule written down before the run, and then stopped. (1) Dropping city, partner type, partner age and the new-outlet flag together was rejected: the original won on PR-AUC in 99.3% of partner resamples (0.413 against 0.291). (2) Dropping only city and partner type was adopted: the original won in only 11.5% (0.413 against 0.463). (3) Checking the explanations then showed a second problem: the continuous partner-age feature had been learned mostly from the months before 1 May, when 105 of 105 confirmed frauds came from established outlets, so it raised the score of long-established outlets (by up to +0.85 in log-odds together with the flag) although after 1 May they had 2 frauds in 1,211 claims. I removed it on that principle, not because of its June score: the model with it won in only 34.8% of resamples (0.463 against 0.465), so nothing measurable was lost. My other worry, that a very low age would cancel the new-outlet flag for outlets onboarded after June, was not borne out: it shifted them by -0.12 against a flag worth +2.90. The new-outlet flag stays because the group effect is measured: 34 frauds in 211 claims after 1 May for new outlets against 2 in 1,211 for established ones. Its cost is real: it is what makes the model rank backwards when the pattern changes (ROC-AUC 0.062 on the May stress test, against 0.428 without it), and most new outlets are clean. Counted one way everywhere (new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026), there are 45 new outlets, of which 8 have a confirmed fraud and 37 have none. Explanations never name a city or a partner type, and the outlet line always carries those group numbers.
+
+Money. A full review list of 40 does not pay on this data: in June it nets Rs -4,320 after Rs 380 per genuine claim held and Rs 260 per claim reviewed. The rule I recommend reviews only claims whose partner has confirmed fraud above the average rate: 25 reviews, 13 frauds and a net Rs 8,039 for June (-3,145 to 21,143), about Rs 322 per claim reviewed. That list is the same whichever base model is used, because it depends only on which partners have a confirmed fraud record; the base model only orders the claims in it and the claims beyond it. Its margin: the frauds it caught averaged Rs 1,469, so it breaks even when 35% of the reviewed claims are fraud, and 52% were (13 of 25; it needs 9). The rule was defined after seeing June and is not independently validated: one month, 8 partners.
+
+Expected frauds. The scores sum to 100 over the 2,252 test claims. 60 of that sits in the 112 claims from the 10 partners with confirmed fraud above the average rate (an implied fraud rate of 53%), which is the group the review rule looks at. 30 is spread over the 2,029 claims from partners with a clean or below-average record (1.5%) and 11 over the 111 claims from partners with no decided claim yet (9.5%).
+
+Probabilities and their limits. The scores carry a two-parameter Platt correction (slope 1.017, intercept +0.575) fitted on the June validation predictions. Before it the model was short by 6.6 frauds among the flagged partners (6.4 predicted, 13 observed) and by +0.7 among everyone else. The intercept is a single number added to every claim, so it lifts the unflagged claims as well. The result: the implied fraud rates for the two unflagged groups in the test (1.5% and 9.5%) are above what June showed for the same groups (1.1% and 1.9%), and the total of 100 is probably too high for that reason. Treat the probabilities as indicative; the ranking is what matters and what I would be judged on.
+
+[Note, not part of the form text: the point guess 0.30-0.35 is the author's judgement and is not computed. The range is computed on Fold B: 0.156 (M3-noage alone, L = 14) to 0.561 (M5-noage, L = 0); the June figure is 0.465 (M5-noage, L = 14).]

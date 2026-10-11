@@ -1,0 +1,173 @@
+Feature builder report (src/features.py). Time axis = first_submitted_at. New regime starts 2026-05-01.
+Fold B is the PRIMARY fold for model selection; Fold A is a STRESS TEST of the regime change.
+
+====================================================================================================
+Signal checks for optional features (Fold B training data only: decided claims before 2026-06-01)
+====================================================================================================
+frauds available: 105 before 1 May, 14 in May. Chi-square p-value of fraud rate against each candidate (small = the rate really differs across its values; kept only below 0.01):
+                         before 1 May 2026: p-value before 1 May 2026: lowest-highest rate May 2026 (new regime): p-value May 2026 (new regime): lowest-highest rate
+hour (4 blocks of 6h)                          0.84                          0.94% - 1.20%                           0.84                              1.65% - 2.79%
+weekday                                        0.08                          0.65% - 1.81%                          0.511                              0.00% - 3.54%
+day of month (3 blocks)                       0.289                          0.86% - 1.25%                          0.979                              1.89% - 2.13%
+claim_description phrase                      0.272                          0.00% - 1.85%                           0.83                              0.00% - 5.00%
+claim_description: 12 stock phrases cover 99.96% of claims; 4 claims have some other text.
+DECISION: hour, weekday and day of month are dropped, and no claim_description features are added: no p-value is below 0.01 in either period. With 14 frauds in May the test has little power, so this says 'no clear difference', not 'proven irrelevant'.
+Policy section 9 (UTC): submitted_at is not a Zoho resolution event, so the exception does not apply. Hour-of-day is flat in both systems (share of claims between 00:00 and 05:59: Zoho 24.7%, CRM 25.7%), so a 5.5-hour shift could not be seen and hour is not a feature anyway.
+
+====================================================================================================
+Rule B: how much new-regime history exists at each cut-off, by investigation lag L
+====================================================================================================
+                   cut-off  frozen at  L  decided new-regime claims  of which fraud history used (>= 50 decided)  partners with new history  partners with new-regime fraud overall rate used for smoothing
+        Fold A (score May) 2026-05-01  0                          0               0                           NO                          0                               0                          0.0108
+        Fold A (score May) 2026-05-01 14                          0               0                           NO                          0                               0                          0.0110
+        Fold A (score May) 2026-05-01 30                          0               0                           NO                          0                               0                          0.0106
+        Fold A (score May) 2026-05-01 60                          0               0                           NO                          0                               0                          0.0105
+       Fold B (score June) 2026-06-01  0                        709              14                          yes                        312                               6                          0.0197
+       Fold B (score June) 2026-06-01 14                        380               8                          yes                        247                               5                          0.0211
+       Fold B (score June) 2026-06-01 30                         20               0                           NO                          0                               0                          0.0108
+       Fold B (score June) 2026-06-01 60                          0               0                           NO                          0                               0                          0.0107
+Final (score Jul-Sep test) 2026-07-01  0                       1422              36                          yes                        360                              10                          0.0253
+Final (score Jul-Sep test) 2026-07-01 14                       1095              27                          yes                        342                               7                          0.0247
+Final (score Jul-Sep test) 2026-07-01 30                        709              14                          yes                        312                               6                          0.0197
+Final (score Jul-Sep test) 2026-07-01 60                         20               0                           NO                          0                               0                          0.0108
+
+Note: the 'final' cut-off is written 2026-07-01, meaning the end of 30 Jun 2026.
+Note: 'overall rate used for smoothing' is also the value a partner with no history gets in partner_new_rate_smoothed. It falls back to the old-regime rate when new-regime history is unavailable, so that value differs between cut-offs. Models therefore use partner_rate_ratio, which is exactly 1.0 for a no-history partner at every cut-off.
+Note: with fewer than 50 decided new-regime claims the history is NOT used: counts 0, partner_has_new_history 0, partner_rate_ratio 1.0 for every partner.
+
+====================================================================================================
+Cold start: claims scored for partners with no decided new-regime claim
+====================================================================================================
+                   cut-off  L  claims scored  from partners with NO decided new-regime claim  share  such partners
+        Fold A (score May)  0            709                                             709 100.0%            312
+        Fold A (score May) 14            709                                             709 100.0%            312
+        Fold A (score May) 30            709                                             709 100.0%            312
+        Fold A (score May) 60            709                                             709 100.0%            312
+       Fold B (score June)  0            713                                             103  14.4%             48
+       Fold B (score June) 14            713                                             213  29.9%            103
+       Fold B (score June) 30            713                                             713 100.0%            316
+       Fold B (score June) 60            713                                             713 100.0%            316
+Final (score Jul-Sep test)  0           2252                                             111   4.9%             20
+Final (score Jul-Sep test) 14           2252                                             236  10.5%             38
+Final (score Jul-Sep test) 30           2252                                             422  18.7%             68
+Final (score Jul-Sep test) 60           2252                                            2252 100.0%            379
+These claims get partner_new_fraud_count = 0, partner_new_claim_count = 0, partner_has_new_history = 0, partner_rate_ratio = 1.0 and partner_new_rate_smoothed = the overall rate above. Never NaN (leakage test 4).
+
+====================================================================================================
+What training rows can teach about new-regime history (rows with partner_has_new_history = 1)
+====================================================================================================
+
+Month-start snapshots (the default used by build_training_features):
+                  training set  L  rows  frauds  rows with new history  frauds among them  rows whose partner had earlier new-regime fraud  frauds among those
+        Fold A (train < 1 May)  0  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 14  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 30  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 60  9724     105                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY  0 10433     119                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY 14 10433     119                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY 30 10433     119                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY 60 10433     119                      0                  0                                                0                   0
+       Final (train to 30 Jun)  0 11146     141                    610                 18                                               31                  16
+       Final (train to 30 Jun) 14 11146     141                    500                 18                                               25                  13
+       Final (train to 30 Jun) 30 11146     141                      0                  0                                                0                   0
+       Final (train to 30 Jun) 60 11146     141                      0                  0                                                0                   0
+
+7-day snapshots (available as snapshot=7, NOT used unless chosen):
+                  training set  L  rows  frauds  rows with new history  frauds among them  rows whose partner had earlier new-regime fraud  frauds among those
+        Fold A (train < 1 May)  0  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 14  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 30  9724     105                      0                  0                                                0                   0
+        Fold A (train < 1 May) 60  9724     105                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY  0 10433     119                    321                 10                                               17                   8
+Fold B (train < 1 Jun) PRIMARY 14 10433     119                    100                  2                                                6                   2
+Fold B (train < 1 Jun) PRIMARY 30 10433     119                      0                  0                                                0                   0
+Fold B (train < 1 Jun) PRIMARY 60 10433     119                      0                  0                                                0                   0
+       Final (train to 30 Jun)  0 11146     141                    977                 29                                               51                  25
+       Final (train to 30 Jun) 14 11146     141                    690                 20                                               35                  15
+       Final (train to 30 Jun) 30 11146     141                    361                  9                                               17                   8
+       Final (train to 30 Jun) 60 11146     141                      0                  0                                                0                   0
+
+Read this before train.py: with month-start snapshots a model trained before 1 June never sees a training row with new-regime history (the new regime only starts on 1 May), so in Fold B it cannot LEARN how much weight the label-based features deserve; only the final model can, from its June rows. 7-day snapshots give Fold B some such rows but make training history fresher than anything a validation or test row gets.
+
+====================================================================================================
+LEAKAGE TEST 1: which labels feed the label-based features of 5 Fold B validation claims
+====================================================================================================
+Sample: 2 random claims from partners that had new-regime fraud in May and 3 random claims from the other partners (5 plain random claims would almost all show empty fraud history). Fold B cut-off = 2026-06-01.
+[132 lines of claim-level detail kept out of the committed copy (policy section 10); they are in reports/raw/]
+PASS: 20 claim x lag checks. Every label used comes from a claim first submitted before (cut-off - L days) and before the claim itself; no claim uses its own label; each feature equals a recount from the rows listed; partner_rate_ratio is exactly 1.0 wherever no new-regime row is used.
+
+====================================================================================================
+LEAKAGE TEST 2: changing a claim's own label does not change its features
+====================================================================================================
+PASS (validation): flipped the label of all 713 Fold B validation claims; their features are identical for L = [0, 14, 30, 60].
+PASS (training rows, a stronger check than asked): for each of the 14 training months, flipped every label from that month onwards; that month's training features are identical (56 month x lag checks).
+Control (the test can fail): flipping the May labels, which June claims ARE allowed to see, changes the features of 713 of 713 validation claims at L = 0.
+
+====================================================================================================
+LEAKAGE TEST 3: label-free features do not change when all later claims are deleted
+====================================================================================================
+PASS: for 120 random claims (40 training, 40 Fold B validation, 40 test), deleted every claim submitted after the claim and rebuilt its rolling features; all identical.
+PASS: same result for ALL claims before 2026-05-15, 2026-06-15 and 2026-08-15 when everything from that date on is deleted.
+Control (the test can fail): deleting EARLIER claims (everything before 1 May) changes 36 of the 120 sampled claims.
+Same-minute claims from one partner are not counted for each other (strictly before): 0 such partner-minutes exist in the data.
+
+====================================================================================================
+LEAKAGE TEST 4 and matrix shapes: no NaN or infinite value in any feature matrix
+====================================================================================================
+PASS: 32 matrices (4 folds x 4 lags x train/scored) are all numeric, finite and free of NaN.
+
+      fold  L train matrix  train frauds scored matrix scored frauds scored claims with partner_has_new_history = 1  training rows with partner_has_new_history = 1
+    fold_A  0    9724 x 46           105      709 x 46            14                                           0.0%                                               0
+    fold_A 14    9724 x 46           105      709 x 46            14                                           0.0%                                               0
+    fold_A 30    9724 x 46           105      709 x 46            14                                           0.0%                                               0
+    fold_A 60    9724 x 46           105      709 x 46            14                                           0.0%                                               0
+    fold_B  0   10433 x 46           119      713 x 46            22                                          85.6%                                               0
+    fold_B 14   10433 x 46           119      713 x 46            22                                          70.1%                                               0
+    fold_B 30   10433 x 46           119      713 x 46            22                                           0.0%                                               0
+    fold_B 60   10433 x 46           119      713 x 46            22                                           0.0%                                               0
+old_design  0    9724 x 46           105     1422 x 46            36                                           0.0%                                               0
+old_design 14    9724 x 46           105     1422 x 46            36                                           0.0%                                               0
+old_design 30    9724 x 46           105     1422 x 46            36                                           0.0%                                               0
+old_design 60    9724 x 46           105     1422 x 46            36                                           0.0%                                               0
+     final  0   11146 x 46           141     2252 x 46     no labels                                          95.1%                                             610
+     final 14   11146 x 46           141     2252 x 46     no labels                                          89.5%                                             500
+     final 30   11146 x 46           141     2252 x 46     no labels                                          81.3%                                               0
+     final 60   11146 x 46           141     2252 x 46     no labels                                           0.0%                                               0
+
+Fold roles: Fold B (score June) is the PRIMARY fold for model selection. Fold A (score May) is a STRESS TEST of the regime change: the new pattern starts on 1 May, so at its cut-off there is no new-regime history at all. 'old_design' scores May-June with history frozen on 1 May. 'final' trains to 30 Jun and scores the Jul-Sep test set.
+
+====================================================================================================
+Feature list
+====================================================================================================
+
+Label-based, frozen at the cut-off (rules A, B):
+   1. partner_new_fraud_count: Confirmed frauds this partner had in the new regime (from 1 May 2026) that were decided before the cut-off.
+   2. partner_new_claim_count: Decided claims this partner had in the new regime before the cut-off.
+   3. partner_new_rate_smoothed: Partner's new-regime fraud rate pulled towards the overall new-regime rate: (frauds + 5 x overall rate) / (claims + 5). A partner with no decided claims gets exactly the overall rate.
+   4. partner_rate_ratio: partner_new_rate_smoothed divided by the overall new-regime rate: above 1 = worse than average, below 1 = better. Exactly 1.0 for a partner with no decided new-regime claim, at every cut-off. Models use this instead of the raw smoothed rate.
+   5. partner_fraud_count_old: Confirmed frauds this partner had before 1 May 2026 (decided before the cut-off). Kept separate so the model can learn it is weak.
+   6. partner_has_new_history: 1 if the partner has at least one decided new-regime claim, 0 if the model knows nothing about it in the new regime.
+
+Label-free, rolling over earlier claims (rule C):
+   7. partner_claims_last_7d: Claims this partner submitted in the 7 days before this claim.
+   8. partner_claims_last_30d: Claims this partner submitted in the 30 days before this claim.
+   9. partner_small_share_last_30d: Share of those 30-day claims that were under Rs 2,000 (0 if the partner had none; see partner_claims_last_30d).
+  10. partner_avg_amount_last_30d: Average amount of those 30-day claims in rupees (0 if the partner had none).
+
+Known at submission:
+  11. partner_age_days: Days between the partner's onboarding and this claim.
+  12. is_new_partner: 1 if the partner was onboarded on or after 1 Oct 2025.
+  13. customer_prior_claims: The customer's earlier warranty claims.
+  14. photo_attached: 1 if a photo was attached.
+  15. claim_amount_inr: Amount claimed, in rupees.
+  16. amount_to_list_price: Amount claimed divided by the product's list price.
+  17. is_small: 1 if the claim is under Rs 2,000 (auto-approved without inspection since 1 May 2026).
+  18. warranty_used_share: days_since_purchase divided by the warranty length in days (warranty_months x 30).
+
+One-hot groups (categories fixed from partners.csv and products.csv, so train, test and the app agree):
+  partner_type_* (3 columns): One column per partner type (service centre, franchise, freelance technician).
+  city_* (18 columns): One column per partner city.
+  family_* (7 columns): One column per product family.
+
+Total: 46 columns.
+Considered and left out: hour, weekday, day of month and claim_description phrases (no signal, see the checks above); n_submissions, serial-repeat features, inspector_note and partner_inspected (rule D).

@@ -1,0 +1,15 @@
+# Everything the final model needs: the data pipeline (src/clean.py, explore.py, evaluate.py,
+# features.py), the final fit (src/final.py), scoring one claim (src/scoring.py) and the checks.
+#
+# Python 3.12 or newer. Tested on Python 3.12.4 and 3.14.2 in plain virtual environments
+# (python -m venv .venv), not Anaconda; both produce an identical predictions.csv.
+# Python 3.11 and older are not supported by these pins.
+#
+# LightGBM and narwhals are NOT needed here; they are in requirements-dev.txt for src/train.py only.
+# The app's web framework is added here when the app is built.
+numpy==2.5.4
+pandas==2.3.3
+pyarrow==26.0.0
+scikit-learn==1.8.0
+scipy==1.18.1
+joblib==1.6.0

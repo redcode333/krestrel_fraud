@@ -1,0 +1,387 @@
+Model comparison (src/train.py). Time axis = first_submitted_at.
+Fold B (score June 2026) is the PRIMARY fold for model selection. Fold A (score May 2026) is a STRESS TEST of the regime change: at its cut-off no new-regime history exists, so M0 is a random draw there and every history feature is off.
+All intervals are 90%, from 1,000 resamples of PARTNERS. Fold B holds 22 frauds from 8 partners, Fold A 14 from 6: the intervals are wide and small differences between models mean nothing.
+
+====================================================================================================
+Investigation lag L: what the export can and cannot tell us
+====================================================================================================
+share of CRM claims with a blank (undecided) label, by month first submitted:
+  2025-10: 3.4%, 2025-11: 2.8%, 2025-12: 2.9%, 2026-01: 3.3%, 2026-02: 2.4%, 2026-03: 2.9%, 2026-04: 3.4%, 2026-05: 3.4%, 2026-06: 2.3%
+  claims first submitted 16-30 June 2026, the newest in the export: 2.8% blank
+The blank share is about the same in every month (2.3% to 3.4%) and does not rise for the newest claims. If blanks were simply 'not investigated yet' they would pile up at the end. So the export cannot reveal how long an investigation takes, and L has to be assumed.
+VALIDATION HEADLINE: L = 14 days. Also shown: L = 0 (optimistic: every outcome known at once) and L = 30 (pessimistic).
+At L >= 30 the history component CANNOT be validated in Fold B: only 20 new-regime claims are decided on 1 June at L = 30 (below the 50 needed), so every history feature is switched off there.
+The FINAL model (src/final.py) freezes history at 30 Jun 2026 with every outcome known by then (L = 0 at the cut-off): the test set runs to 30 Sep, so for claims from August on, all June outcomes would be decided even under a 30-day lag.
+
+====================================================================================================
+RESULTS TABLE: Fold B (PRIMARY), headline lag L = 14
+====================================================================================================
+Lists: 'fixed 40' always reviews 40 claims; 'stop-early' reviews up to 40 in expected-value order and stops when EV <= 0 [DEPENDS ON CALIBRATION: 36 validation frauds is a thin base]. 'tie places' = list places decided by a random tie-break rather than by the score. The partner-rule list has its own section below.
+                                                                           PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100    net Rs: fixed 40 by score        net Rs: fixed 40 by EV          net Rs: stop-early stop-early reviews tie places
+M0  partner_rate_ratio only (BENCHMARK)                    0.347 [0.030 to 0.589]  0.843 [0.665 to 0.947]     13 [1 to 25]      13 [3 to 27]   -1,561 [-23,574 to 19,316]    16,685 [-17,764 to 53,184]        -185 [-1,465 to 910]                  4         15
+M3  logistic, label-free features                          0.159 [0.030 to 0.315]  0.804 [0.692 to 0.880]      7 [0 to 13]      10 [2 to 18]     -11,676 [-25,600 to 235]   -18,492 [-25,600 to -9,043]  -7,427 [-12,800 to -1,632]                 19          0
+M5  M3 offset + 1 learned coefficient on log(ratio)        0.384 [0.046 to 0.580]  0.867 [0.731 to 0.952]     11 [0 to 18]      15 [3 to 29]    -4,787 [-25,600 to 8,904]     -9,748 [-25,600 to 4,747]   -3,523 [-11,082 to 5,748]                 22          0
+M5f M3 offset + 1.0 x log(ratio)                           0.413 [0.046 to 0.618]  0.870 [0.732 to 0.956]     11 [0 to 20]      15 [3 to 29]   -4,787 [-25,600 to 12,068]     -7,373 [-25,600 to 6,104]   -2,076 [-10,433 to 8,279]                 25          0
+M5-mid   M3-mid offset + 1.0 x log(ratio)                  0.463 [0.050 to 0.657]  0.889 [0.779 to 0.954]     11 [0 to 18]      15 [4 to 28]   -4,320 [-25,600 to 10,861]    10,873 [-19,570 to 35,593]       523 [-5,507 to 7,429]                 16          0
+M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)  0.465 [0.057 to 0.661]  0.884 [0.768 to 0.952]     11 [0 to 18]      15 [4 to 29]   -4,320 [-25,600 to 10,999]    -7,373 [-19,858 to 11,567]     3,083 [-3,200 to 9,788]                 12          0
+M5-lite  M3-lite offset + 1.0 x log(ratio)                 0.291 [0.024 to 0.483]  0.775 [0.578 to 0.899]      9 [0 to 16]      11 [0 to 21]    -7,373 [-25,600 to 6,392]     4,870 [-19,858 to 40,465]       700 [-3,393 to 5,450]                  9          0
+M1  logistic, all features, month-start snapshots          0.121 [0.035 to 0.274]  0.831 [0.731 to 0.896]      7 [0 to 12]      13 [3 to 23]  -11,676 [-25,600 to -1,206]  -20,867 [-25,600 to -10,571]      -6,787 [-13,642 to 51]                 18          0
+M1b logistic, all features, 7-day snapshots                0.309 [0.035 to 0.550]  0.840 [0.690 to 0.935]      9 [1 to 18]      15 [3 to 28]    -9,436 [-23,574 to 7,220]    -12,022 [-25,600 to 3,650]      -669 [-7,680 to 6,982]                 17          0
+M2  LightGBM, 7-day snapshots                              0.183 [0.053 to 0.351]  0.887 [0.778 to 0.942]      8 [2 to 15]      16 [4 to 29]     -11,780 [-22,151 to 472]   -25,600 [-25,600 to 10,892]        -1,920 [-4,480 to 0]                  3          0
+Ceiling (true labels, not a model)                         1.000 [1.000 to 1.000]  1.000 [1.000 to 1.000]     22 [8 to 37]      22 [8 to 37]    28,433 [-6,878 to 70,628]     28,433 [-6,878 to 71,285]   39,953 [11,052 to 77,191]                 22         18
+
+M5 learned coefficient on log(partner_rate_ratio), Fold B, L = 14: 0.84 (90% bootstrap range 0.00 to 5.00; allowed range 0 to 5), learned from 100 training rows whose partner has new-regime history, 2 of them fraud.
+
+====================================================================================================
+Pre-registered decision rule: net Rs of the fixed top-40-by-score list, Fold B, L = 14 (candidates as registered)
+====================================================================================================
+  M0  partner_rate_ratio only (BENCHMARK)              net Rs    -1,561, upper end of its 90% interval    19,316: not clearly beaten by any more complex model
+  M3  logistic, label-free features                    net Rs   -11,676, upper end of its 90% interval       235: not clearly beaten by any more complex model
+  M5  M3 offset + 1 learned coefficient on log(ratio)  net Rs    -4,787, upper end of its 90% interval     8,904: not clearly beaten by any more complex model
+  M1  logistic, all features, month-start snapshots    net Rs   -11,676, upper end of its 90% interval    -1,206: not clearly beaten by any more complex model
+  M1b logistic, all features, 7-day snapshots          net Rs    -9,436, upper end of its 90% interval     7,220: not clearly beaten by any more complex model
+  M2  LightGBM, 7-day snapshots                        net Rs   -11,780, upper end of its 90% interval       472: not clearly beaten by any more complex model
+THE RULE CHOOSES: M0  partner_rate_ratio only (BENCHMARK)
+
+Supporting evidence, same partner resamples for both models (not part of the rule):
+                                                          net Rs difference vs M0 [90%] frauds-found difference [90%] share of resamples where it beats M0
+M3  logistic, label-free features                                -10,115 [-24,052 to 0]                 -6 [-14 to 0]                                   0%
+M5  M3 offset + 1 learned coefficient on log(ratio)               -4,006 [-12,825 to 0]                  -2 [-8 to 0]                                   1%
+M5f M3 offset + 1.0 x log(ratio)                                   -3,226 [-9,807 to 0]                  -2 [-6 to 0]                                   1%
+M5-mid   M3-mid offset + 1.0 x log(ratio)                         -2,991 [-11,624 to 0]                  -2 [-8 to 0]                                   2%
+M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)         -2,840 [-11,624 to 0]                  -2 [-8 to 0]                                   2%
+M5-lite  M3-lite offset + 1.0 x log(ratio)                        -5,812 [-15,771 to 0]                 -4 [-10 to 0]                                   0%
+M1  logistic, all features, month-start snapshots                -11,837 [-27,042 to 0]                 -6 [-15 to 0]                                   0%
+M1b logistic, all features, 7-day snapshots                   -6,896 [-19,365 to 2,950]                 -4 [-10 to 2]                                  11%
+M2  LightGBM, 7-day snapshots                                 -9,175 [-24,559 to 2,701]                 -4 [-13 to 3]                                  10%
+
+====================================================================================================
+FINAL MODEL: a documented deviation from the pre-registered rule
+====================================================================================================
+The rule chose M0. The user chose instead M5f: log-odds = M3 log-odds + 1.0 x log(partner_rate_ratio). (Which base model M3 stands for is settled by the robustness variants below.)
+Why (decided by the user after seeing the results above; this is a judgement, not a result of the rule):
+  1. M0 cannot rank claims beyond the partners with a fraud record: it orders all other claims only by how many decided claims their partner has. 15 of its 40 June places were filled by random tie-break.
+  2. The intervals do not separate the models, so the rule's choice of M0 is not evidence that M0 is better.
+  3. On Fold B at L = 14, M5f has PR-AUC 0.413 against 0.347 for M0 and ROC-AUC 0.870 against 0.843, and finds 11 frauds in the top 40 against 13 (a difference inside the noise).
+  4. A coefficient of 1.0 lies inside what the data suggests: learned value 0.84 at L = 14 (90% range 0.00 to 5.00, from 2 frauds) and 1.18 at L = 0 (0.72 to 1.63, from 10 frauds). Fixing it avoids estimating a number the data cannot pin down.
+M0 stays in every table as the benchmark.
+
+Sensitivity to the coefficient (Fold B). 1.00 is the final model; the other two are the learned values:
+                                      L = 14: PR-AUC L = 14: ROC-AUC L = 14: frauds in top 40 L = 14: net Rs fixed 40 by score L = 0: PR-AUC L = 0: ROC-AUC L = 0: frauds in top 40 L = 0: net Rs fixed 40 by score
+coefficient 0.84 (learned at L = 14)           0.384           0.867                       11                           -4,787         0.452          0.916                      12                          -3,367
+coefficient 1.00 (FIXED, final model)          0.413           0.870                       11                           -4,787         0.483          0.923                      12                          -3,367
+coefficient 1.18 (learned at L = 0)            0.432           0.873                       13                           -1,561         0.526          0.929                      13                          -1,561
+
+====================================================================================================
+ROBUSTNESS VARIANT 1: M5-lite (base model without city, partner type, partner age and the new-partner flag)
+====================================================================================================
+M3-lite drops 23 of the 40 original base features: partner_age_days, is_new_partner, the city columns and the partner-type columns. It keeps the 17 others. M5-lite = M3-lite log-odds + 1.0 x log(partner_rate_ratio).
+RULE (fixed before running): keep M5 only if it beats M5-lite on PR-AUC in at least 90% of partner resamples on Fold B at L = 14; otherwise adopt M5-lite. Both models are scored on the same 1,000 partner resamples (seed 0).
+
+                                                                                                PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100 net Rs: fixed 40 by score net Rs: partner rule
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5                          0.413 [0.046 to 0.618]  0.870 [0.732 to 0.956]     11 [0 to 20]      15 [3 to 29]                    -4,787   8,039 (25 reviews)
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5-lite                     0.291 [0.024 to 0.483]  0.775 [0.578 to 0.899]      9 [0 to 16]      11 [0 to 21]                    -7,373   8,039 (25 reviews)
+Fold B, L = 0 (optimistic): M5                                                  0.483 [0.085 to 0.712]  0.923 [0.837 to 0.969]     12 [2 to 23]      17 [5 to 31]                    -3,367   8,119 (31 reviews)
+Fold B, L = 0 (optimistic): M5-lite                                             0.406 [0.061 to 0.598]  0.859 [0.703 to 0.942]     11 [3 to 18]      15 [3 to 28]                    -4,582   8,119 (31 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5       0.012 [0.005 to 0.022]  0.119 [0.081 to 0.160]       0 [0 to 0]        0 [0 to 0]                   -25,600        0 (0 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5-lite  0.019 [0.008 to 0.041]  0.428 [0.276 to 0.630]       0 [0 to 0]        2 [0 to 6]                   -25,600        0 (0 reviews)
+
+Head to head on the same partner resamples:
+                                                                      resamples used M5 beats M5-lite on PR-AUC M5-lite beats M5   tie PR-AUC difference, M5 minus M5-lite [90%] M5 beats M5-lite on ROC-AUC
+Fold B, L = 14 (PRIMARY: the rule is applied here)                              1000                      99.3%             0.7%  0.0%                 +0.110 [+0.014 to +0.211]                       99.0%
+Fold B, L = 0 (optimistic)                                                      1000                      93.5%             6.5%  0.0%                 +0.071 [-0.005 to +0.151]                       95.8%
+Fold A (STRESS TEST: no history, so each model equals its base model)            998                       0.0%            99.9%  0.1%                 -0.007 [-0.023 to -0.002]                        0.0%
+
+RULE OUTCOME: on Fold B at L = 14, M5 beats M5-lite on PR-AUC in 99.3% of partner resamples, at or above the 90% needed to keep it. KEEP M5; M5-lite is not adopted.
+The partner-rule list is the same for both wherever fewer than 40 claims qualify: it depends only on which partners have a confirmed fraud record. The base model only orders the claims inside it, and the claims beyond it on the fixed list of 40.
+
+Ten largest standardised coefficients of the base model (per standard deviation of the feature; + raises the score):
+
+  fitted on all labelled claims to 30 Jun 2026 (what a final model would use):
+                             M3                         M3-lite
+1    amount_to_list_price +0.97      amount_to_list_price +1.02
+2               city_Kota -0.62     customer_prior_claims +0.55
+3   customer_prior_claims +0.55                  is_small +0.47
+4          is_new_partner +0.55       family_Robot Vacuum +0.47
+5                is_small +0.44     family_Water Purifier +0.35
+6     family_Robot Vacuum +0.44        family_Room Heater -0.35
+7        partner_age_days +0.41   partner_claims_last_30d +0.33
+8               city_Pune +0.37          claim_amount_inr -0.27
+9            city_Lucknow -0.37        family_Ceiling Fan -0.24
+10  family_Water Purifier +0.34  family_Induction Cooktop -0.21
+
+  fitted on claims before 1 Jun 2026 (what Fold B evaluated):
+                              M3                       M3-lite
+1     amount_to_list_price +1.00    amount_to_list_price +1.01
+2                city_Kota -0.63   customer_prior_claims +0.57
+3    customer_prior_claims +0.53     family_Robot Vacuum +0.35
+4         partner_age_days +0.42   family_Water Purifier +0.27
+5           is_new_partner +0.38      family_Room Heater -0.27
+6   partner_type_franchise +0.35  partner_claims_last_7d -0.23
+7             city_Lucknow -0.34        claim_amount_inr -0.23
+8      family_Robot Vacuum +0.33                is_small +0.23
+9                city_Pune +0.32      family_Ceiling Fan -0.16
+10   family_Water Purifier +0.31          photo_attached -0.15
+
+====================================================================================================
+ROBUSTNESS VARIANT 2: M5-mid (base model without city and partner type, WITH partner age and the new-partner flag)
+====================================================================================================
+M3-mid drops 21 of the 40 original base features: the city columns and the partner-type columns (one-hot columns with no business meaning, fitted on about 10 fraud partners). It keeps the 19 others. M5-mid = M3-mid log-odds + 1.0 x log(partner_rate_ratio).
+RULE (fixed before running): keep M5 only if it beats M5-mid on PR-AUC in at least 90% of partner resamples on Fold B at L = 14; otherwise adopt M5-mid. Both models are scored on the same 1,000 partner resamples (seed 0).
+
+                                                                                               PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100 net Rs: fixed 40 by score net Rs: partner rule
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5                         0.413 [0.046 to 0.618]  0.870 [0.732 to 0.956]     11 [0 to 20]      15 [3 to 29]                    -4,787   8,039 (25 reviews)
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5-mid                     0.463 [0.050 to 0.657]  0.889 [0.779 to 0.954]     11 [0 to 18]      15 [4 to 28]                    -4,320   8,039 (25 reviews)
+Fold B, L = 0 (optimistic): M5                                                 0.483 [0.085 to 0.712]  0.923 [0.837 to 0.969]     12 [2 to 23]      17 [5 to 31]                    -3,367   8,119 (31 reviews)
+Fold B, L = 0 (optimistic): M5-mid                                             0.564 [0.202 to 0.761]  0.926 [0.835 to 0.975]     15 [3 to 24]      18 [5 to 31]                     1,140   8,119 (31 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5      0.012 [0.005 to 0.022]  0.119 [0.081 to 0.160]       0 [0 to 0]        0 [0 to 0]                   -25,600        0 (0 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5-mid  0.011 [0.005 to 0.021]  0.063 [0.034 to 0.095]       0 [0 to 0]        0 [0 to 0]                   -25,600        0 (0 reviews)
+
+Head to head on the same partner resamples:
+                                                                      resamples used M5 beats M5-mid on PR-AUC M5-mid beats M5   tie PR-AUC difference, M5 minus M5-mid [90%] M5 beats M5-mid on ROC-AUC
+Fold B, L = 14 (PRIMARY: the rule is applied here)                              1000                     11.5%           88.5%  0.0%                -0.045 [-0.115 to +0.016]                      30.3%
+Fold B, L = 0 (optimistic)                                                      1000                      5.0%           95.0%  0.0%                -0.079 [-0.168 to -0.000]                      41.4%
+Fold A (STRESS TEST: no history, so each model equals its base model)            998                     99.8%            0.0%  0.2%                +0.001 [+0.000 to +0.001]                      99.8%
+
+RULE OUTCOME: on Fold B at L = 14, M5 beats M5-mid on PR-AUC in 11.5% of partner resamples, below the 90% needed to keep it. ADOPT M5-mid: it removes memorisation of outlet identity at no clear cost.
+The partner-rule list is the same for both wherever fewer than 40 claims qualify: it depends only on which partners have a confirmed fraud record. The base model only orders the claims inside it, and the claims beyond it on the fixed list of 40.
+
+Ten largest standardised coefficients of the base model (per standard deviation of the feature; + raises the score):
+
+  fitted on all labelled claims to 30 Jun 2026 (what a final model would use):
+                             M3                         M3-mid
+1    amount_to_list_price +0.97     amount_to_list_price +0.98
+2               city_Kota -0.62           is_new_partner +0.62
+3   customer_prior_claims +0.55    customer_prior_claims +0.57
+4          is_new_partner +0.55      family_Robot Vacuum +0.45
+5                is_small +0.44         partner_age_days +0.42
+6     family_Robot Vacuum +0.44                 is_small +0.42
+7        partner_age_days +0.41    family_Water Purifier +0.32
+8               city_Pune +0.37       family_Room Heater -0.32
+9            city_Lucknow -0.37       family_Ceiling Fan -0.25
+10  family_Water Purifier +0.34  partner_claims_last_30d +0.23
+
+  fitted on claims before 1 Jun 2026 (what Fold B evaluated):
+                              M3                        M3-mid
+1     amount_to_list_price +1.00    amount_to_list_price +0.99
+2                city_Kota -0.63   customer_prior_claims +0.56
+3    customer_prior_claims +0.53          is_new_partner +0.43
+4         partner_age_days +0.42        partner_age_days +0.41
+5           is_new_partner +0.38     family_Robot Vacuum +0.35
+6   partner_type_franchise +0.35   family_Water Purifier +0.26
+7             city_Lucknow -0.34      family_Room Heater -0.26
+8      family_Robot Vacuum +0.33  partner_claims_last_7d -0.23
+9                city_Pune +0.32                is_small +0.22
+10   family_Water Purifier +0.31        claim_amount_inr -0.22
+
+====================================================================================================
+Does partner age work against the new-outlet flag? Contributions in the M3-mid final fit (log-odds, before the Platt correction)
+====================================================================================================
+coefficients per standard deviation: partner_age_days +0.42, is_new_partner +0.62. Mean age in training 893 days.
+                                                       outlets test claims median age at claim (days) new-outlet flag partner age (median) partner age (range) both together (median) both together (range)
+(i) outlets onboarded after 30 Jun 2026                     11          49                         34           +2.90                -0.80      -0.83 to -0.77                  +2.10        +2.07 to +2.13
+(ii) established outlets (onboarded before 1 Oct 2025)     319        1853                       1203           -0.13                +0.29      -0.37 to +0.98                  +0.16        -0.51 to +0.85
+(iii) outlets onboarded 1 Oct 2025 to 30 Jun 2026           49         350                        161           +2.90                -0.68      -0.83 to -0.54                  +2.22        +2.07 to +2.36
+READING. (a) Established outlets: the two features together add +0.16 at the median and up to +0.85 for the oldest, all of it from age (the flag alone gives -0.13). That part of the concern is RIGHT: age raises the score of long-established outlets.
+(b) Outlets onboarded after 30 Jun: age takes -0.80 off, against -0.68 for other new outlets, a difference of -0.12 next to the flag's +2.90. That part of the concern is NOT borne out: the low age trims the flag slightly, it does not cancel it.
+
+====================================================================================================
+ROBUSTNESS VARIANT 3 (the last change): M5-noage (M5-mid's base model without partner_age_days; the new-outlet flag is kept)
+====================================================================================================
+M3-noage drops 22 of the 40 original base features: partner_age_days, on top of the city and partner-type columns already dropped by M5-mid. It keeps the 18 others. M5-noage = M3-noage log-odds + 1.0 x log(partner_rate_ratio).
+RULE (fixed before running): keep M5-mid only if it beats M5-noage on PR-AUC in at least 90% of partner resamples on Fold B at L = 14; otherwise adopt M5-noage. Both models are scored on the same 1,000 partner resamples (seed 0).
+
+                                                                                                 PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100 net Rs: fixed 40 by score net Rs: partner rule
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5-mid                       0.463 [0.050 to 0.657]  0.889 [0.779 to 0.954]     11 [0 to 18]      15 [4 to 28]                    -4,320   8,039 (25 reviews)
+Fold B, L = 14 (PRIMARY: the rule is applied here): M5-noage                     0.465 [0.057 to 0.661]  0.884 [0.768 to 0.952]     11 [0 to 18]      15 [4 to 29]                    -4,320   8,039 (25 reviews)
+Fold B, L = 0 (optimistic): M5-mid                                               0.564 [0.202 to 0.761]  0.926 [0.835 to 0.975]     15 [3 to 24]      18 [5 to 31]                     1,140   8,119 (31 reviews)
+Fold B, L = 0 (optimistic): M5-noage                                             0.561 [0.187 to 0.759]  0.917 [0.805 to 0.974]     14 [3 to 24]      18 [6 to 32]                      -666   8,119 (31 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5-mid    0.011 [0.005 to 0.021]  0.063 [0.034 to 0.095]       0 [0 to 0]        0 [0 to 0]                   -25,600        0 (0 reviews)
+Fold A (STRESS TEST: no history, so each model equals its base model): M5-noage  0.011 [0.005 to 0.021]  0.062 [0.034 to 0.092]       0 [0 to 0]        0 [0 to 0]                   -25,600        0 (0 reviews)
+
+Head to head on the same partner resamples:
+                                                                      resamples used M5-mid beats M5-noage on PR-AUC M5-noage beats M5-mid   tie PR-AUC difference, M5-mid minus M5-noage [90%] M5-mid beats M5-noage on ROC-AUC
+Fold B, L = 14 (PRIMARY: the rule is applied here)                              1000                           34.8%                 65.2%  0.0%                      -0.002 [-0.014 to +0.009]                            63.6%
+Fold B, L = 0 (optimistic)                                                      1000                           64.2%                 35.8%  0.0%                      +0.003 [-0.013 to +0.033]                            79.9%
+Fold A (STRESS TEST: no history, so each model equals its base model)            998                           69.9%                 29.1%  1.0%                      +0.000 [-0.000 to +0.000]                            86.7%
+
+RULE OUTCOME: on Fold B at L = 14, M5-mid beats M5-noage on PR-AUC in 34.8% of partner resamples, below the 90% needed to keep it. ADOPT M5-noage: a continuous age feature mixes two regimes (before 1 May all confirmed fraud came from established outlets) and M5-mid has not shown it is better with it; the new-outlet flag is the measured cohort effect.
+The partner-rule list is the same for both wherever fewer than 40 claims qualify: it depends only on which partners have a confirmed fraud record. The base model only orders the claims inside it, and the claims beyond it on the fixed list of 40.
+
+Ten largest standardised coefficients of the base model (per standard deviation of the feature; + raises the score):
+
+  fitted on all labelled claims to 30 Jun 2026 (what a final model would use):
+                           M3-mid                       M3-noage
+1      amount_to_list_price +0.98     amount_to_list_price +1.01
+2            is_new_partner +0.62    customer_prior_claims +0.58
+3     customer_prior_claims +0.57      family_Robot Vacuum +0.46
+4       family_Robot Vacuum +0.45                 is_small +0.45
+5          partner_age_days +0.42           is_new_partner +0.44
+6                  is_small +0.42    family_Water Purifier +0.34
+7     family_Water Purifier +0.32       family_Room Heater -0.33
+8        family_Room Heater -0.32       family_Ceiling Fan -0.26
+9        family_Ceiling Fan -0.25  partner_claims_last_30d +0.24
+10  partner_claims_last_30d +0.23         claim_amount_inr -0.23
+
+  fitted on claims before 1 Jun 2026 (what Fold B evaluated):
+                          M3-mid                      M3-noage
+1     amount_to_list_price +0.99    amount_to_list_price +1.02
+2    customer_prior_claims +0.56   customer_prior_claims +0.58
+3           is_new_partner +0.43     family_Robot Vacuum +0.35
+4         partner_age_days +0.41   family_Water Purifier +0.29
+5      family_Robot Vacuum +0.35          is_new_partner +0.27
+6    family_Water Purifier +0.26      family_Room Heater -0.27
+7       family_Room Heater -0.26                is_small +0.25
+8   partner_claims_last_7d -0.23  partner_claims_last_7d -0.24
+9                 is_small +0.22        claim_amount_inr -0.23
+10        claim_amount_inr -0.22      family_Ceiling Fan -0.17
+
+====================================================================================================
+Outcome of the robustness rules
+====================================================================================================
+1. M5-lite vs M5:      M5 wins 99.3% of resamples -> M5 kept, M5-lite thrown away.
+2. M5-mid vs M5:       M5 wins 11.5% of resamples -> M5-mid ADOPTED, M5 thrown away.
+3. M5-noage vs M5-mid: M5-mid wins 34.8% of resamples -> M5-noage ADOPTED, M5-mid thrown away.
+MODEL LEFT STANDING: M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL). No further variants are tried.
+Whatever the base model, the review list under the partner rule is the same (25 reviews, 13 frauds at L = 14): it depends only on partners with a confirmed fraud record.
+
+====================================================================================================
+Fold B (PRIMARY), L = 0 (optimistic)
+====================================================================================================
+                                                                           PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100    net Rs: fixed 40 by score        net Rs: fixed 40 by EV          net Rs: stop-early stop-early reviews tie places
+M0  partner_rate_ratio only (BENCHMARK)                    0.568 [0.138 to 0.808]  0.917 [0.785 to 0.982]     16 [4 to 27]      20 [6 to 33]    2,359 [-17,764 to 21,327]    18,229 [-13,902 to 52,703]     2,176 [-1,920 to 8,363]                  7          9
+M3  logistic, label-free features                          0.159 [0.030 to 0.315]  0.804 [0.692 to 0.880]      7 [0 to 13]      10 [2 to 18]     -11,676 [-25,600 to 235]   -18,492 [-25,600 to -9,043]  -7,427 [-12,800 to -1,632]                 19          0
+M5  M3 offset + 1 learned coefficient on log(ratio)        0.526 [0.105 to 0.763]  0.929 [0.842 to 0.974]     13 [3 to 24]      17 [5 to 31]   -1,561 [-20,198 to 18,441]    -3,367 [-24,133 to 11,253]     -148 [-8,960 to 10,372]                 25          0
+M5f M3 offset + 1.0 x log(ratio)                           0.483 [0.085 to 0.712]  0.923 [0.837 to 0.969]     12 [2 to 23]      17 [5 to 31]   -3,367 [-22,512 to 15,580]     -4,787 [-25,600 to 8,749]     -156 [-8,716 to 10,694]                 22          0
+M5-mid   M3-mid offset + 1.0 x log(ratio)                  0.564 [0.202 to 0.761]  0.926 [0.835 to 0.975]     15 [3 to 24]      18 [5 to 31]    1,140 [-20,198 to 17,899]    -7,373 [-19,570 to 14,452]    4,530 [-3,385 to 13,549]                 15          0
+M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)  0.561 [0.187 to 0.759]  0.917 [0.805 to 0.974]     14 [3 to 24]      18 [6 to 32]     -666 [-19,720 to 18,328]    -5,829 [-19,875 to 10,854]    5,810 [-2,105 to 14,804]                 13          0
+M5-lite  M3-lite offset + 1.0 x log(ratio)                 0.406 [0.061 to 0.598]  0.859 [0.703 to 0.942]     11 [3 to 18]      15 [3 to 28]   -4,582 [-20,968 to 10,304]    -9,095 [-19,858 to 27,837]     1,340 [-2,753 to 5,888]                  8          0
+M1  logistic, all features, month-start snapshots          0.123 [0.035 to 0.279]  0.833 [0.736 to 0.898]      7 [0 to 12]      13 [3 to 22]  -11,676 [-25,600 to -1,194]  -20,867 [-25,600 to -10,562]      -6,787 [-13,642 to 51]                 18          0
+M1b logistic, all features, 7-day snapshots                0.233 [0.054 to 0.406]  0.870 [0.773 to 0.924]      8 [1 to 15]      13 [3 to 24]    -9,748 [-24,056 to 4,660]   -14,837 [-25,600 to -4,293]    -7,620 [-14,865 to -721]                 22          0
+M2  LightGBM, 7-day snapshots                              0.310 [0.085 to 0.558]  0.908 [0.798 to 0.961]     14 [3 to 25]      16 [4 to 30]   -2,374 [-19,958 to 17,214]   -17,195 [-25,600 to 25,370]        -1,920 [-4,480 to 0]                  3          0
+Ceiling (true labels, not a model)                         1.000 [1.000 to 1.000]  1.000 [1.000 to 1.000]     22 [8 to 37]      22 [8 to 37]    28,433 [-6,878 to 70,628]     28,433 [-6,878 to 71,285]   39,953 [11,052 to 77,191]                 22         18
+
+M5 learned coefficient: 1.18 (90% range 0.72 to 1.63), from 321 informative training rows, 10 fraud.
+
+====================================================================================================
+Fold B (PRIMARY), L = 30 (pessimistic)
+====================================================================================================
+                                                                           PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100     net Rs: fixed 40 by score        net Rs: fixed 40 by EV          net Rs: stop-early stop-early reviews tie places
+M0  partner_rate_ratio only (BENCHMARK)                    0.031 [0.012 to 0.051]  0.500 [0.500 to 0.500]       1 [0 to 3]        1 [0 to 7]   -23,242 [-25,600 to -7,354]    -7,354 [-25,600 to 29,138]                  0 [0 to 0]                  0         40
+M3  logistic, label-free features                          0.159 [0.030 to 0.315]  0.804 [0.692 to 0.880]      7 [0 to 13]      10 [2 to 18]      -11,676 [-25,600 to 235]   -18,492 [-25,600 to -9,043]  -7,427 [-12,800 to -1,632]                 19          0
+M5  M3 offset + 1 learned coefficient on log(ratio)        0.159 [0.030 to 0.315]  0.804 [0.692 to 0.880]      7 [0 to 13]      10 [2 to 18]      -11,676 [-25,600 to 235]   -18,492 [-25,600 to -9,043]  -7,427 [-12,800 to -1,632]                 19          0
+M5f M3 offset + 1.0 x log(ratio)                           0.159 [0.030 to 0.315]  0.804 [0.692 to 0.880]      7 [0 to 13]      10 [2 to 18]      -11,676 [-25,600 to 235]   -18,492 [-25,600 to -9,043]  -7,427 [-12,800 to -1,632]                 19          0
+M5-mid   M3-mid offset + 1.0 x log(ratio)                  0.147 [0.039 to 0.270]  0.795 [0.733 to 0.849]       4 [0 to 8]      11 [3 to 18]   -17,679 [-25,600 to -9,347]    -2,621 [-23,242 to 33,888]  -5,962 [-10,240 to -1,448]                 13          0
+M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)  0.156 [0.043 to 0.277]  0.797 [0.717 to 0.855]       4 [0 to 9]      11 [3 to 19]   -17,679 [-25,600 to -7,649]      -894 [-23,873 to 32,624]    -2,762 [-6,400 to 1,314]                  8          0
+M5-lite  M3-lite offset + 1.0 x log(ratio)                 0.052 [0.017 to 0.126]  0.573 [0.487 to 0.670]       2 [0 to 5]        3 [0 to 7]  -20,867 [-25,600 to -13,776]    -4,996 [-25,600 to 31,496]   -3,840 [-6,400 to -1,280]                  6          0
+M1  logistic, all features, month-start snapshots          0.124 [0.034 to 0.278]  0.829 [0.727 to 0.895]      7 [0 to 13]      13 [3 to 22]     -11,676 [-25,600 to -473]  -20,867 [-25,600 to -10,657]    -7,427 [-14,468 to -386]                 19          0
+M1b logistic, all features, 7-day snapshots                0.122 [0.035 to 0.277]  0.829 [0.727 to 0.895]      7 [0 to 12]      13 [3 to 22]     -11,676 [-25,600 to -488]  -20,867 [-25,600 to -10,657]      -6,787 [-13,642 to 51]                 18          0
+M2  LightGBM, 7-day snapshots                              0.162 [0.045 to 0.319]  0.876 [0.766 to 0.931]      8 [2 to 14]      15 [3 to 29]   -13,056 [-22,899 to -2,716]    -4,979 [-25,600 to 29,138]        -1,920 [-4,480 to 0]                  3          0
+Ceiling (true labels, not a model)                         1.000 [1.000 to 1.000]  1.000 [1.000 to 1.000]     22 [8 to 37]      22 [8 to 37]     28,433 [-6,878 to 70,628]     28,433 [-6,878 to 71,285]   39,953 [11,052 to 77,191]                 22         18
+
+M5 learned coefficient: cannot be estimated (no training row has new-regime history at this lag); set to 0. At this lag no validation claim has history either, so each M5 variant equals its base model here.
+
+====================================================================================================
+Fold A (STRESS TEST of the regime change), L = 14
+====================================================================================================
+No new-regime history exists on 1 May at any lag, so M0 is a random draw, every M5 variant equals its base model, and M1/M1b/M2 can only use partner_fraud_count_old on top of the label-free features.
+                                                                           PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100     net Rs: fixed 40 by score        net Rs: fixed 40 by EV          net Rs: stop-early stop-early reviews tie places
+M0  partner_rate_ratio only (BENCHMARK)                    0.020 [0.007 to 0.036]  0.500 [0.500 to 0.500]       1 [0 to 3]        1 [0 to 5]  -23,381 [-25,600 to -20,551]  -25,600 [-25,600 to -25,600]                  0 [0 to 0]                  0         40
+M3  logistic, label-free features                          0.012 [0.005 to 0.022]  0.119 [0.081 to 0.160]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]   -4,480 [-7,680 to -1,920]                  7          0
+M5  M3 offset + 1 learned coefficient on log(ratio)        0.012 [0.005 to 0.022]  0.119 [0.081 to 0.160]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]   -4,480 [-7,680 to -1,920]                  7          0
+M5f M3 offset + 1.0 x log(ratio)                           0.012 [0.005 to 0.022]  0.119 [0.081 to 0.160]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]   -4,480 [-7,680 to -1,920]                  7          0
+M5-mid   M3-mid offset + 1.0 x log(ratio)                  0.011 [0.005 to 0.021]  0.063 [0.034 to 0.095]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]  -7,680 [-11,520 to -4,480]                 12          0
+M5-noage M3-noage offset + 1.0 x log(ratio) (FINAL MODEL)  0.011 [0.005 to 0.021]  0.062 [0.034 to 0.092]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]  -7,040 [-10,240 to -3,840]                 11          0
+M5-lite  M3-lite offset + 1.0 x log(ratio)                 0.019 [0.008 to 0.041]  0.428 [0.276 to 0.630]       0 [0 to 0]        2 [0 to 6]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]  -7,680 [-11,520 to -4,480]                 12          0
+M1  logistic, all features, month-start snapshots          0.012 [0.005 to 0.022]  0.121 [0.078 to 0.164]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]  -7,040 [-10,880 to -3,200]                 11          0
+M1b logistic, all features, 7-day snapshots                0.012 [0.005 to 0.022]  0.119 [0.076 to 0.162]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]  -7,040 [-10,880 to -3,200]                 11          0
+M2  LightGBM, 7-day snapshots                              0.012 [0.005 to 0.022]  0.125 [0.086 to 0.164]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]        -1,920 [-3,840 to 0]                  3          0
+Ceiling (true labels, not a model)                         1.000 [1.000 to 1.000]  1.000 [1.000 to 1.000]     14 [5 to 26]      14 [5 to 26]     1,170 [-17,041 to 25,481]     1,170 [-17,041 to 25,481]    17,810 [5,371 to 33,858]                 14         26
+ROC-AUC far below 0.5 means the fitted models rank May claims BACKWARDS: they learned the pre-May pattern, which reversed on 1 May. A new regime shift would hurt the final model in the same way until new outcomes arrive.
+
+====================================================================================================
+The final model (M5n) and the benchmark (M0) on every design, L = 14
+====================================================================================================
+                                                                                                                        PR-AUC                 ROC-AUC frauds in top 40 frauds in top 100     net Rs: fixed 40 by score        net Rs: fixed 40 by EV           net Rs: stop-early stop-early reviews tie places
+M5n: Fold B, score June (PRIMARY)                                                                       0.465 [0.057 to 0.661]  0.884 [0.768 to 0.952]     11 [0 to 18]      15 [4 to 29]    -4,320 [-25,600 to 10,999]    -7,373 [-19,858 to 11,567]      3,083 [-3,200 to 9,788]                 12          0
+M5n: Fold A, score May (STRESS TEST: no new-regime history)                                             0.011 [0.005 to 0.021]  0.062 [0.034 to 0.092]       0 [0 to 0]        0 [0 to 0]  -25,600 [-25,600 to -25,600]  -25,600 [-25,600 to -25,600]   -7,040 [-10,240 to -3,840]                 11          0
+M5n: Pooled, May + June                                                                                 0.244 [0.058 to 0.370]  0.564 [0.430 to 0.660]     11 [3 to 18]      14 [3 to 25]  -29,920 [-45,359 to -14,033]   -32,973 [-45,458 to -9,134]    -3,957 [-10,880 to 4,135]                 23          0
+M5n: Old design = what a model that has not seen the new regime scores (train < 1 May, score May-June)  0.014 [0.006 to 0.023]  0.108 [0.064 to 0.178]       0 [0 to 0]        0 [0 to 0]  -51,200 [-51,200 to -51,200]    -32,954 [-51,200 to 3,538]  -14,080 [-19,200 to -8,960]                 22          0
+M0: Fold B, score June (PRIMARY)                                                                        0.347 [0.030 to 0.589]  0.843 [0.665 to 0.947]     13 [1 to 25]      13 [3 to 27]    -1,561 [-23,574 to 19,316]    16,685 [-17,764 to 53,184]         -185 [-1,465 to 910]                  4         15
+M0: Fold A, score May (STRESS TEST: no new-regime history)                                              0.020 [0.007 to 0.036]  0.500 [0.500 to 0.500]       1 [0 to 3]        1 [0 to 5]  -23,381 [-25,600 to -20,551]  -25,600 [-25,600 to -25,600]                   0 [0 to 0]                  0         40
+M0: Pooled, May + June                                                                                  0.222 [0.039 to 0.378]  0.662 [0.562 to 0.735]     14 [3 to 26]      14 [3 to 28]   -24,942 [-44,745 to -3,226]    -8,915 [-43,364 to 25,029]         -185 [-1,465 to 910]                  4         55
+M0: Old design = what a model that has not seen the new regime scores (train < 1 May, score May-June)   0.025 [0.011 to 0.042]  0.500 [0.500 to 0.500]       1 [0 to 5]        1 [0 to 6]  -48,981 [-51,200 to -36,695]    -32,954 [-51,200 to 3,538]                   0 [0 to 0]                  0         80
+Pooled and old design cover two months, so their lists hold 80 places.
+
+====================================================================================================
+PARTNER RULE (recommended product rule): review only claims whose partner has partner_rate_ratio > 1
+====================================================================================================
+Ranked by score, capped at 40 a month, never padded. LABEL: rule defined after seeing June; not independently validated; one month, 8 partners.
+'partner_rate_ratio > 1' means the partner's confirmed new-regime fraud rate is above the average in the frozen history.
+                                                     claims eligible        reviews        frauds genuine held                    net Rs Rs per claim reviewed for comparison, net Rs of the fixed 40 by score
+Fold B, L = 14: M5-noage M3-noage offset + 1.0 x log              25   25 [7 to 40]  13 [0 to 25]           12  8,039 [-3,145 to 21,143]     322 [-640 to 713]                                          -4,320
+Fold B, L = 14: M0  partner_rate_ratio only                       25   25 [7 to 40]  13 [0 to 25]           12  8,039 [-3,145 to 21,059]     322 [-640 to 710]                                          -1,561
+Fold B, L = 0: M5-noage M3-noage offset + 1.0 x log               31  31 [12 to 40]  16 [3 to 27]           15  8,119 [-3,065 to 22,850]     262 [-204 to 661]                                            -666
+Fold B, L = 0: M0  partner_rate_ratio only                        31  31 [12 to 40]  16 [3 to 27]           15  8,119 [-3,065 to 21,674]     262 [-204 to 644]                                           2,359
+When fewer than 40 claims are eligible the ranking does not matter (all eligible claims are reviewed), so the final model and M0 give the same list; the score only decides the order within it and which claims are cut when more than 40 qualify.
+Fold A (stress test): 0 claims eligible, 0 reviewed. With no confirmed fraud on record the rule reviews nothing, and the product must say so rather than pad the list.
+
+====================================================================================================
+Experiment: Zoho weight and training rows, for the best two fitted models (L = 14)
+====================================================================================================
+M0 has no training step, so there is nothing to vary for it. 'Best two' = highest net Rs of the fixed top-40-by-score list on Fold B among the pre-registered fitted models: M5, M1b.
+
+M5  M3 offset + 1 learned coefficient on log(ratio):
+                                            Fold B: PR-AUC Fold B: frauds in top 40 Fold B: net Rs fixed 40 by score Fold B: training rows (frauds)          Fold A: PR-AUC Fold A: frauds in top 40 Fold A: net Rs fixed 40 by score
+all claims, Zoho weight 1.0 (base)  0.384 [0.046 to 0.580]             11 [0 to 18]        -4,787 [-25,600 to 8,904]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+Zoho weight 0.5                     0.418 [0.047 to 0.642]             11 [0 to 19]       -4,787 [-25,600 to 10,244]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+Zoho excluded                       0.430 [0.051 to 0.665]             11 [0 to 21]       -4,787 [-25,600 to 12,294]                      5827 (73)  0.012 [0.005 to 0.023]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+new-regime claims only              0.488 [0.164 to 0.752]             15 [6 to 25]         -264 [-16,498 to 17,775]                       709 (14)                     n/a   n/a (no training rows)                              n/a
+all claims + regime flag            0.329 [0.043 to 0.535]              9 [0 to 17]        -8,409 [-25,600 to 6,817]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+
+M1b logistic, all features, 7-day snapshots:
+                                            Fold B: PR-AUC Fold B: frauds in top 40 Fold B: net Rs fixed 40 by score Fold B: training rows (frauds)          Fold A: PR-AUC Fold A: frauds in top 40 Fold A: net Rs fixed 40 by score
+all claims, Zoho weight 1.0 (base)  0.309 [0.035 to 0.550]              9 [1 to 18]        -9,436 [-23,574 to 7,220]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+Zoho weight 0.5                     0.313 [0.036 to 0.558]             10 [1 to 18]        -7,410 [-23,574 to 7,298]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+Zoho excluded                       0.323 [0.042 to 0.565]             12 [2 to 20]       -4,204 [-21,788 to 11,324]                      5827 (73)  0.012 [0.005 to 0.023]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+new-regime claims only              0.554 [0.197 to 0.802]             18 [6 to 26]        5,384 [-15,903 to 19,675]                       709 (14)                     n/a   n/a (no training rows)                              n/a
+all claims + regime flag            0.301 [0.035 to 0.542]              8 [1 to 16]       -10,683 [-23,574 to 5,580]                    10433 (119)  0.012 [0.005 to 0.022]               0 [0 to 0]     -25,600 [-25,600 to -25,600]
+
+====================================================================================================
+Staleness: does the history signal fade as the frozen history ages? Fold B by week of June (L = 14)
+====================================================================================================
+           claims frauds frauds from partners with fraud in the frozen history age of newest label used (days) ROC-AUC M0 ROC-AUC M5n places on the month's top-40 list (M5n) frauds caught by those places
+1-7 June      147      6                                                     3                           14-20      0.758       0.774                                       6                             2
+8-14 June     191      5                                                     4                           21-27      0.884       0.966                                      21                             4
+15-21 June    158      4                                                     3                           28-34      0.944       0.916                                       7                             3
+22-30 June    217      7                                                     3                           35-43      0.841       0.920                                       6                             2
+Read with care: about 5 frauds a week. A fall in the later weeks would mean the frozen history is ageing; a flat line would not prove it stays good.
+What the final model faces CANNOT be tested: its history is frozen on 30 Jun 2026 and it scores claims up to 92 days later, but only two months of the new regime exist. The oldest case measurable here is the last week of June at L = 14, where the newest label used is 43 days old. Anything beyond that is extrapolation.
+
+====================================================================================================
+Cold start: claims from partners with and without decided new-regime history, Fold B (L = 14)
+====================================================================================================
+                            claims frauds PR-AUC ROC-AUC places on the top-40 list frauds caught
+M0: partner HAS history        500     18  0.412   0.899                        25            13
+M0: partner has NO history     213      4  0.019   0.500                        15             0
+M3n: partner HAS history       500     18  0.181   0.784                        27             4
+M3n: partner has NO history    213      4  0.084   0.853                        13             0
+M5n: partner HAS history       500     18  0.553   0.894                        31            11
+M5n: partner has NO history    213      4  0.084   0.853                         9             0
+For M0 every no-history claim has the same score, so its PR-AUC there is just the fraud rate and its list places are luck. M5n equals M3n on no-history claims (ratio = 1.0). Random PR-AUC = the group's fraud rate.
+
+====================================================================================================
+What the June lists are made of (Fold B, L = 14)
+====================================================================================================
+                                                   reviewed frauds genuine held fraud Rs caught largest single fraud Rs net Rs if only these were reviewed
+M5n: fixed 40 by score                                   40     11           29          17,100                   1,995                             -4,320
+M5n:   of which places with partner_rate_ratio > 1       20     11            9          17,100                   1,995                              8,480
+M5n:   of which other places                             20      0           20               0                       0                            -12,800
+M5n: partner rule list                                   25     13           12          19,099                   1,995                              8,039
+M0: fixed 40 by score                                    40     13           27          19,099                   1,995                             -1,561
+M0:   of which places with partner_rate_ratio > 1        25     13           12          19,099                   1,995                              8,039
+M0:   of which other places                              15      0           15               0                       0                             -9,600
+M0: partner rule list                                    25     13           12          19,099                   1,995                              8,039
+Average June fraud claim: Rs 2,076. At that size a reviewed claim pays for itself only if the chance it is fraud is above 26% (from p*amount - (1-p)*380 - 260 > 0).
+
+Calibration, the final fit, predictions.csv and the expected-score text are in src/final.py (reports/final.txt).

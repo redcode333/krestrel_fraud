@@ -1,0 +1,187 @@
+{
+  "model": "M5-noage: M3-noage log-odds + 1.0 x log(partner_rate_ratio), Platt-corrected",
+  "costs": {
+    "goodwill_inr": 380,
+    "service_contact_inr": 260
+  },
+  "expected_value_formula": "p*amount - (1-p)*380 - 260",
+  "break_even_formula": "a review pays for itself when p > (380 + 260) / (amount + 380)",
+  "review_rule": {
+    "ratio_threshold": 1.0,
+    "monthly_cap": 40,
+    "rank_by": "score",
+    "pad_list": false,
+    "text": "Review only claims whose partner has partner_rate_ratio > 1 (confirmed new-regime fraud above the average rate), highest score first, at most 40 a month. If no claim qualifies, say so; never pad the list.",
+    "label": "rule defined after seeing June; not independently validated; one month, 8 partners"
+  },
+  "small_claim_limit_inr": 2000,
+  "regime_start": "2026-05-01",
+  "new_partner_from": "2025-10-01",
+  "history_frozen_on": "2026-06-30",
+  "history_lag_days": 0,
+  "profile_date": "2026-09-30",
+  "profile_as_of": "2026-10-01T00:00:00",
+  "overall_new_regime_rate": 0.02531645569620253,
+  "smoothing_k": 5,
+  "min_new_decided": 50,
+  "cohort": {
+    "definition": "new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026",
+    "new_outlets": 45,
+    "new_outlets_with_fraud": 8,
+    "new_outlets_without_fraud": 37,
+    "new_outlet_claims": 211,
+    "new_outlet_frauds": 34,
+    "new_outlet_fraud_rate": 0.16113744075829384,
+    "established_outlets": 315,
+    "established_outlets_with_fraud": 2,
+    "established_outlet_claims": 1211,
+    "established_outlet_frauds": 2,
+    "established_outlet_fraud_rate": 0.0016515276630883566,
+    "before_may_frauds": 105,
+    "before_may_established_frauds": 105,
+    "period": "decided claims first submitted 1 May to 30 Jun 2026"
+  },
+  "products": {
+    "KH-AF-01": {
+      "family": "Air Fryer",
+      "list_price_inr": 5199.0,
+      "warranty_months": 12
+    },
+    "KH-AF-02": {
+      "family": "Air Fryer",
+      "list_price_inr": 6499.0,
+      "warranty_months": 12
+    },
+    "KH-AF-03": {
+      "family": "Air Fryer",
+      "list_price_inr": 8773.0,
+      "warranty_months": 12
+    },
+    "KH-MG-01": {
+      "family": "Mixer Grinder",
+      "list_price_inr": 3199.0,
+      "warranty_months": 24
+    },
+    "KH-MG-02": {
+      "family": "Mixer Grinder",
+      "list_price_inr": 3999.0,
+      "warranty_months": 24
+    },
+    "KH-MG-03": {
+      "family": "Mixer Grinder",
+      "list_price_inr": 5398.0,
+      "warranty_months": 24
+    },
+    "KH-WP-01": {
+      "family": "Water Purifier",
+      "list_price_inr": 11999.0,
+      "warranty_months": 12
+    },
+    "KH-WP-02": {
+      "family": "Water Purifier",
+      "list_price_inr": 14999.0,
+      "warranty_months": 12
+    },
+    "KH-WP-03": {
+      "family": "Water Purifier",
+      "list_price_inr": 20248.0,
+      "warranty_months": 12
+    },
+    "KH-RV-01": {
+      "family": "Robot Vacuum",
+      "list_price_inr": 17599.0,
+      "warranty_months": 12
+    },
+    "KH-RV-02": {
+      "family": "Robot Vacuum",
+      "list_price_inr": 21999.0,
+      "warranty_months": 12
+    },
+    "KH-RV-03": {
+      "family": "Robot Vacuum",
+      "list_price_inr": 29698.0,
+      "warranty_months": 12
+    },
+    "KH-IC-01": {
+      "family": "Induction Cooktop",
+      "list_price_inr": 2399.0,
+      "warranty_months": 12
+    },
+    "KH-IC-02": {
+      "family": "Induction Cooktop",
+      "list_price_inr": 2999.0,
+      "warranty_months": 12
+    },
+    "KH-IC-03": {
+      "family": "Induction Cooktop",
+      "list_price_inr": 4048.0,
+      "warranty_months": 12
+    },
+    "KH-CF-01": {
+      "family": "Ceiling Fan",
+      "list_price_inr": 2799.0,
+      "warranty_months": 24
+    },
+    "KH-CF-02": {
+      "family": "Ceiling Fan",
+      "list_price_inr": 3499.0,
+      "warranty_months": 24
+    },
+    "KH-CF-03": {
+      "family": "Ceiling Fan",
+      "list_price_inr": 4723.0,
+      "warranty_months": 24
+    },
+    "KH-RH-01": {
+      "family": "Room Heater",
+      "list_price_inr": 1999.0,
+      "warranty_months": 12
+    },
+    "KH-RH-02": {
+      "family": "Room Heater",
+      "list_price_inr": 2499.0,
+      "warranty_months": 12
+    },
+    "KH-RH-03": {
+      "family": "Room Heater",
+      "list_price_inr": 3373.0,
+      "warranty_months": 12
+    }
+  },
+  "categories": {
+    "partner_type": [
+      "authorised_service_centre",
+      "franchise",
+      "freelance_technician"
+    ],
+    "city": [
+      "Aurangabad",
+      "Bengaluru",
+      "Bhopal",
+      "Chennai",
+      "Coimbatore",
+      "Delhi",
+      "Hubballi",
+      "Hyderabad",
+      "Indore",
+      "Jaipur",
+      "Kota",
+      "Lucknow",
+      "Mumbai",
+      "Mysuru",
+      "Nagpur",
+      "Nashik",
+      "Pune",
+      "Warangal"
+    ],
+    "family": [
+      "Air Fryer",
+      "Ceiling Fan",
+      "Induction Cooktop",
+      "Mixer Grinder",
+      "Robot Vacuum",
+      "Room Heater",
+      "Water Purifier"
+    ]
+  }
+}

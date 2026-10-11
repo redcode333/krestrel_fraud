@@ -1,0 +1,6 @@
+# Experiments only: src/train.py compares the final model with LightGBM (model M2).
+# The final model, predictions.csv and the app do NOT need anything in this file.
+# Use a second environment so the first stays clean:  python -m venv .venv-dev
+-r requirements.txt
+lightgbm==4.7.0
+narwhals==2.27.1

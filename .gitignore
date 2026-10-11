@@ -1,0 +1,38 @@
+# Client data - ops-policy section 10: never commit
+data/
+rev_docs/
+
+# Raw reports carry real partner IDs. Only the masked copies in reports/ are committed.
+# The ID mapping is data/partner_mask.csv, covered by data/ above.
+reports/raw/
+
+# Real partner IDs next to fraud counts. The committed stand-in is models/partner_profile.example.csv;
+# rebuild the real one from the data pack with: python scripts/build_partner_profile.py
+models/partner_profile.csv
+
+# Virtualenvs
+.venv/
+.venv-dev/
+venv/
+env/
+virtualenv/
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.cache/
+node_modules/
+
+# Local env / editor / OS
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# predictions.csv is a deliverable and must be committed
+!/predictions.csv

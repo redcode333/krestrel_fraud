@@ -1,0 +1,262 @@
+Kestrel warranty claims - exploration of the cleaned training data (src/explore.py)
+train: 11146 decided claims, 141 fraud (1.27%), 2025-04-01 to 2026-06-30; time axis = first_submitted_at
+test: 2252 claims, 2026-07-01 to 2026-09-30 (used in items 2 and 8 only)
+
+====================================================================================================
+1. Fraud rate by month and by source
+====================================================================================================
+         claims  fraud   rate
+month                        
+2025-04     739      7  0.95%
+2025-05     764      4  0.52%
+2025-06     780     11  1.41%
+2025-07     793     11  1.39%
+2025-08     756      6  0.79%
+2025-09     774      7  0.90%
+2025-10     736      8  1.09%
+2025-11     717     10  1.39%
+2025-12     794     10  1.26%
+2026-01     730      8  1.10%
+2026-02     694      5  0.72%
+2026-03     738      9  1.22%
+2026-04     709      9  1.27%
+2026-05     709     14  1.97%
+2026-06     713     22  3.09%
+
+             claims  fraud   rate
+source                           
+crm            6540     95  1.45%
+legacy_zoho    4606     46  1.00%
+
+CRM claims before 1 May 2026 only: 1.15%  (Zoho: 1.00%)
+
+SO WHAT: The monthly rate sits around 1% until April 2026, then rises (1.08% before 1 May, 2.53% after) and is still climbing in the last month (3.09%), so the test months may run higher again. CRM looks worse than Zoho only because it contains May-June; like for like the two systems are close (1.15% vs 1.00%), so the undecided cases hidden in the Zoho zeros do not visibly distort the rate.
+
+====================================================================================================
+2. Before vs after 1 May 2026, by claim size (policy: under Rs 2,000 auto-approved from 1 May 2026)
+====================================================================================================
+                                      claims  fraud   rate  fraud_rs
+period            size_band                                         
+before 1 May 2026 Rs 2,000 and above    3790     73  1.93%    533288
+                  under Rs 2,000        5934     32  0.54%     37147
+from 1 May 2026   Rs 2,000 and above     337      1  0.30%     17866
+                  under Rs 2,000        1085     35  3.23%     49257
+
+share of claims under Rs 2,000:
+  train, before 1 May 2026  61.02%
+  train, from 1 May 2026    76.30%
+  test (Jul-Sep 2026)       77.00%
+
+fraud per month:
+  before 1 May 2026  13 months    8.1 fraud claims/month  Rs 43,880/month
+  from 1 May 2026     2 months   18.0 fraud claims/month  Rs 33,562/month
+
+SO WHAT: The fraud moved. Before the change small claims were the safe ones (0.54%) and large claims the risky ones (1.93%). After it, 35 of 36 frauds are small claims (3.23%) and large claims are nearly clean. The test set is 77.00% small claims, the same mix as May-June, so it sits in the new regime; a model fitted only to pre-May data would learn the opposite pattern. In rupees fraud did not rise: Rs 43,880 a month before, Rs 33,562 after. More fraud claims (8.1 to 18.0 a month), each much smaller.
+
+====================================================================================================
+3. New vs old partners
+====================================================================================================
+partners onboarded on/after each cut-off (policy section 6: 'about 60 new service partners over the past year'):
+            partners in partners.csv
+cut-off                             
+2025-06-01                        60
+2025-07-01                        60
+2025-08-01                        60
+2025-09-01                        60
+2025-10-01                        60
+2025-11-01                        60
+2025-12-01                        56
+Definition used everywhere for 'new outlet' counts: new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026: 45, of which 8 have a confirmed fraud.
+no partner was onboarded between March 2025 and November 2025
+
+new = onboarded on/after 2025-10-01
+             claims  fraud   rate
+partner_age                      
+new             481     34  7.07%
+old           10665    107  1.00%
+                               claims  fraud    rate
+period            partner_age                       
+before 1 May 2026 new             270      0   0.00%
+                  old            9454    105   1.11%
+from 1 May 2026   new             211     34  16.11%
+                  old            1211      2   0.17%
+
+second cut (new = onboarded on/after 2025-11-01): selects exactly the same claims, so the tables are identical
+
+SO WHAT: The 1 Oct and 1 Nov cuts give 60 and 60 partners: the same group, because nobody was onboarded between March 2025 and November 2025, and both match the policy's 'about 60' (only 45 of them have a decided claim since 1 May 2026). New partners had 0 frauds in 270 claims before 1 May and 34 in 211 after (16.11%), against 0.17% for old partners after. Ritu is right about where the fraud has been since May, but all 105 frauds before May came from old partners, and item 4 shows the new group is not guilty as a whole.
+
+====================================================================================================
+4. Partner concentration
+====================================================================================================
+partners with at least one decided train claim: 366; with at least one fraud: 51
+
+top 10 partners by fraud count, all 15 months (141 frauds):
+            claims  fraud    rate group cum_share_of_fraud
+partner_id                                                
+P176            39     13  33.33%   old              9.22%
+P113            38     12  31.58%   old             17.73%
+P058            36     10  27.78%   old             24.82%
+P077            39     10  25.64%   new             31.91%
+P321            33      9  27.27%   old             38.30%
+P205            34      9  26.47%   old             44.68%
+P236            25      7  28.00%   old             49.65%
+P162            30      7  23.33%   old             54.61%
+P035            40      7  17.50%   new             59.57%
+P248            29      5  17.24%   new             63.12%
+
+top 10 partners by fraud count, May-June 2026 only (36 frauds):
+            claims  fraud     rate group cum_share_of_fraud
+partner_id                                                 
+P077            12     10   83.33%   new             27.78%
+P035            12      7   58.33%   new             47.22%
+P248            13      5   38.46%   new             61.11%
+P170             9      4   44.44%   new             72.22%
+P356             8      3   37.50%   new             80.56%
+P039             2      2  100.00%   new             86.11%
+P352             2      2  100.00%   new             91.67%
+P367             5      1   20.00%   old             94.44%
+P335             6      1   16.67%   new             97.22%
+P273             6      1   16.67%   old            100.00%
+
+new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026:
+  45 new outlets -> NO confirmed fraud: 37, at least one: 8
+  for contrast, established outlets with a decided claim since 1 May 2026: 315 -> at least one confirmed fraud: 2
+
+does a partner's fraud record carry over the 1 May change?
+  partners with a fraud claim before 1 May: 41; their May-June record: 160 claims, 0 fraud (0.00%)
+  partners with a fraud claim in May-June: 10; their record before 1 May: 166 claims, 0 fraud
+  partners with fraud in both periods: 0
+
+SO WHAT: Both people are right. Fraud is concentrated in a few outlets (top 10 of 366 partners hold 63.12% over 15 months; in May-June all 36 frauds come from 10 partners, 34 of them from new partners). But 37 of the 45 new outlets (decided claims since 1 May) have no confirmed fraud; only 8 have, so a 'new partner' rule would hold up 37 clean outlets to reach 8. The catch for modelling: the outlets changed. The 41 partners with fraud before May produced 0 fraud in 160 May-June claims, and the May-June fraud partners had 0 fraud before May. A partner's pre-May fraud history does not predict May-June; only history built up inside the new regime can.
+
+====================================================================================================
+5. Repeated serials (normalised serial, decided train claims only)
+====================================================================================================
+distinct serials: 6983; appearing in more than one claim: 2992 (covering 7155 of 11146 claims); max claims on one serial: 6
+
+                    claims  fraud   rate
+serial_seen_before                      
+first time            6983     82  1.17%
+seen before           4163     59  1.42%
+                                      claims  fraud   rate
+period            serial_seen_before                      
+before 1 May 2026 first time            6429     68  1.06%
+                  seen before           3295     37  1.12%
+from 1 May 2026   first time             554     14  2.53%
+                  seen before            868     22  2.53%
+
+among claims whose serial was seen before:
+  earlier claim came from a different partner: False claims     6  fraud   0  rate 0.00%
+  earlier claim came from a different partner: True  claims  4157  fraud  59  rate 1.42%
+  earlier claim was for a different SKU: False claims   122  fraud   5  rate 4.10%
+  earlier claim was for a different SKU: True  claims  4041  fraud  54  rate 1.34%
+
+SO WHAT: Serials do not identify a unit in this data. 2992 of 6983 serials appear in more than one claim, and of the 4163 repeat claims 4041 are for a different product and 4157 come from a different partner than an earlier claim, which real serials could not do at this rate. Fraud is 1.42% on a seen-before serial against 1.17% on a first-time one: no usable signal. The only hint is same serial and same product (122 claims, 5 fraud), too few to trust. Do not sell 'duplicate serial' to Kestrel as a rule.
+
+====================================================================================================
+6. inspector_note: leaky words? (report only)
+====================================================================================================
+claims with a note: 8164 of 11146; distinct note texts: 7
+
+notes containing an obviously leaky word:
+  'fraud': 0 notes (0 on fraud claims)
+  'suspic': 0 notes (0 on fraud claims)
+  'fake': 0 notes (0 on fraud claims)
+  'duplic': 0 notes (0 on fraud claims)
+  'reject': 0 notes (0 on fraud claims)
+
+share of claims with NO note, by label:
+  is_fraud=0: 26.62% of 11005
+  is_fraud=1: 37.59% of 141
+
+every distinct note text:
+                                    claims  fraud   rate
+inspector_note                                          
+Customer has bill, serial verified    1233     15  1.22%
+Photos match fault, approved          1186     10  0.84%
+PCB replaced under warranty           1176     16  1.36%
+Minor fault, part swapped             1171     20  1.71%
+Heating element open circuit          1157      6  0.52%
+Motor winding failure confirmed       1132     10  0.88%
+Unit inspected, fault confirmed       1109     11  0.99%
+
+top words (share of notes in that class containing the word):
+          fraud (88 notes) non-fraud (8076 notes) difference
+word                                                        
+minor               22.73%                 14.25%      8.48%
+part                22.73%                 14.25%      8.48%
+swapped             22.73%                 14.25%      8.48%
+fault               46.59%                 42.41%      4.18%
+pcb                 18.18%                 14.36%      3.82%
+replaced            18.18%                 14.36%      3.82%
+under               18.18%                 14.36%      3.82%
+warranty            18.18%                 14.36%      3.82%
+bill                17.05%                 15.08%      1.96%
+customer            17.05%                 15.08%      1.96%
+has                 17.05%                 15.08%      1.96%
+serial              17.05%                 15.08%      1.96%
+verified            17.05%                 15.08%      1.96%
+inspected           12.50%                 13.60%     -1.10%
+unit                12.50%                 13.60%     -1.10%
+failure             11.36%                 13.89%     -2.53%
+motor               11.36%                 13.89%     -2.53%
+winding             11.36%                 13.89%     -2.53%
+approved            11.36%                 14.56%     -3.20%
+match               11.36%                 14.56%     -3.20%
+photos              11.36%                 14.56%     -3.20%
+confirmed           23.86%                 27.49%     -3.63%
+circuit              6.82%                 14.25%     -7.43%
+element              6.82%                 14.25%     -7.43%
+heating              6.82%                 14.25%     -7.43%
+open                 6.82%                 14.25%     -7.43%
+
+SO WHAT: No leak. None of the leaky words appears (0 hits); the notes are 7 stock phrases whose fraud rates all sit between 0.52% and 1.71%, and the widest gap in word use between fraud and non-fraud notes is 8.5 points ('minor'), on only 88 fraud notes. The text carries little signal either way, which fits rule 4. Fraud claims more often have no note at all, but that follows from the May change (small claims stopped being inspected, see item 8) rather than from anything the inspector wrote.
+
+====================================================================================================
+7. Baseline: predict every claim as 'not fraud'
+====================================================================================================
+                                  claims  fraud missed accuracy  fraud_rs_paid_out
+set                                                                               
+all training labels                11146           141   98.73%             637558
+train period (before 1 May 2026)    9724           105   98.92%             570435
+May-June 2026                       1422            36   97.47%              67123
+
+SO WHAT: A model that never flags anything scores 98.73% accuracy on all labels and 97.47% on May-June, already above the board's 97% target while catching zero fraud and letting Rs 67,123 through in two months. Accuracy cannot tell a useless model from a good one; this is the number to show Ritu when replacing the KPI.
+
+====================================================================================================
+8. Test set (Jul-Sep 2026) vs train from 1 May 2026 (May-June, decided claims only)
+====================================================================================================
+                                              train May-Jun 2026 test Jul-Sep 2026
+claims                                                      1422              2252
+claims per month                                             711               751
+partner_inspected = Y                                     21.80%            21.31%
+  inspected, claims under Rs 2,000                         0.00%             0.00%
+  inspected, claims Rs 2,000 and above                    91.99%            92.66%
+photo_attached = Y                                        78.41%            77.80%
+inspector_note blank                                      81.29%            81.22%
+claims under Rs 2,000                                     76.30%            77.00%
+amount Rs: p10                                               654               640
+amount Rs: p25                                               935               941
+amount Rs: median                                           1374              1396
+amount Rs: p75                                              1995              1995
+amount Rs: p90                                              4454              4767
+amount Rs: mean                                             2183              2156
+amount Rs: max                                             26122             26728
+claims from new partners (1 Oct 2025 cut)                 14.84%            17.72%
+distinct partners                                            360               379
+customer_prior_claims >= 2                                 4.01%             4.13%
+days_since_purchase median                                   220               208
+source = crm                                             100.00%           100.00%
+claim_description not one of the common texts                  0                 0
+
+product family mix: largest difference in share = 2.76%
+
+things the test set has that the model will have no history for:
+  test claims from partners with no decided train claim: 81 of 2252 (3.60%), from 14 partners
+  of which partners onboarded after the last train claim (2026-06-30): 11 partners, 49 claims
+  test claims from new partners (1 Oct 2025 cut): 399, of which from partners with no decided train claim: 81
+  test claims whose serial appears in a decided train claim: 1410 (62.61%)
+  test claim_ids repeated: 0 (n_submissions is always 1)
+  gap between last train claim and last test claim: 92 days (labels for July-September fraud will not exist when those claims are scored)
+
+SO WHAT: On the surface the test set looks like May-June: inspected 21.31% vs 21.80%, the same photo share and the same amount distribution, so a model validated on May-June is being tested on like-for-like claims. The difference that can hurt is history: 81 test claims (3.60%) come from partners the model has never seen a decided claim from, including 11 partners onboarded after training ends, and the fraud in May-June sat in exactly that kind of young outlet. Partner-history features will be blank where they matter most, so the model needs a sensible fallback for partners with little or no history.

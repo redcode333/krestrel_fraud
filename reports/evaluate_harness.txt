@@ -1,0 +1,134 @@
+Evaluation harness self-test with dummy scores (src/evaluate.py). No model is involved.
+Review budget 40 claims a month; a genuine claim held costs Rs 380; every reviewed claim costs Rs 260 (assumption).
+
+Folds (time axis = first_submitted_at, decided claims only):
+  Fold A: train < 2026-05-01, validate May 2026 - STRESS TEST of the regime change (the new pattern starts on 1 May, so training holds no new-regime history)
+      train 9724 claims (105 fraud); validate 709 claims, 14 fraud (1.97%) from 6 partners, out of 312 partners with claims
+  Fold B: train < 2026-06-01, validate June 2026 - PRIMARY fold for model selection
+      train 10433 claims (119 fraud); validate 713 claims, 22 fraud (3.09%) from 8 partners, out of 316 partners with claims
+  Pooled: fold A's May scores + fold B's June scores
+      no fit of its own; validate 1422 claims, 36 fraud (2.53%) from 10 partners, out of 360 partners with claims
+  Old design: train < 2026-05-01, validate May-June 2026 (what a model that has not seen the new regime scores)
+      train 9724 claims (105 fraud); validate 1422 claims, 36 fraud (2.53%) from 10 partners, out of 360 partners with claims
+
+CAUTION: the validation windows hold very few frauds (36 in total, from 10 partners). One partner more or less in a resample moves every top-40 number a lot, so the 90% intervals below are wide. Read them as rough ranges, not precise estimates.
+
+What to expect from the dummies:
+  fold_A: picking 40 claims blind should find about 40 x 1.97% = 0.79 frauds
+  fold_B: picking 40 claims blind should find about 40 x 3.09% = 1.23 frauds
+
+--- Dummy 1: constant score 0.02 (every claim tied, so the list is a random draw) ---
+                      claims fraud all-zero accuracy PR-AUC ROC-AUC frauds in top 100 overall
+Fold A (May)             709    14            98.03%  0.020   0.500                         1
+Fold B (June)            713    22            96.91%  0.031   0.500                         1
+Pooled (May+June)       1422    36            97.47%  0.025   0.500                         1
+Old design (May+June)   1422    36            97.47%  0.025   0.500                         1
+
+FIXED 40 per month, ranked by score  (value [90% interval, 1,000 partner resamples]):
+                      reviewed frauds found      fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)                40   1 [0 to 3]   1,839 [0 to 3,990]           39  -23,381 [-25,600 to -20,551]   -585 [-640 to -514]                      40
+Fold B (June)               40   1 [0 to 3]  1,978 [0 to 17,866]           39   -23,242 [-25,600 to -7,354]   -581 [-640 to -184]                      40
+Pooled (May+June)           80   1 [0 to 5]  1,839 [0 to 11,826]           79  -48,981 [-51,200 to -36,695]   -612 [-640 to -459]                      80
+Old design (May+June)       80   1 [0 to 5]  1,839 [0 to 11,826]           79  -48,981 [-51,200 to -36,695]   -612 [-640 to -459]                      80
+
+FIXED 40 per month, ranked by expected value  (value [90% interval, 1,000 partner resamples]):
+                      reviewed frauds found       fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break places with EV > 0
+Fold A (May)                40   0 [0 to 0]            0 [0 to 0]           40  -25,600 [-25,600 to -25,600]   -640 [-640 to -640]                       0                  0
+Fold B (June)               40   1 [0 to 3]  17,866 [0 to 53,598]           39    -7,354 [-25,600 to 29,138]    -184 [-640 to 728]                       0                  0
+Pooled (May+June)           80   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0                  0
+Old design (May+June)       80   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0                  0
+
+STOP-EARLY: up to 40 per month in expected-value order, stopping when EV <= 0 [DEPENDS ON CALIBRATION: 36 validation frauds is a thin base for trusting p]  (value [90% interval, 1,000 partner resamples]):
+                         reviewed frauds found fraud Rs caught genuine held net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)           0 [0 to 0]   0 [0 to 0]      0 [0 to 0]            0   0 [0 to 0]                   n/a                       0
+Fold B (June)          0 [0 to 0]   0 [0 to 0]      0 [0 to 0]            0   0 [0 to 0]                   n/a                       0
+Pooled (May+June)      0 [0 to 0]   0 [0 to 0]      0 [0 to 0]            0   0 [0 to 0]                   n/a                       0
+Old design (May+June)  0 [0 to 0]   0 [0 to 0]      0 [0 to 0]            0   0 [0 to 0]                   n/a                       0
+
+PARTNER RULE: only claims whose partner has partner_rate_ratio > 1, ranked by score, up to 40 per month, never padded [RULE DEFINED AFTER SEEING JUNE; NOT INDEPENDENTLY VALIDATED; ONE MONTH, 8 PARTNERS]: not applicable, no partner eligibility was supplied (it needs partner_rate_ratio; see src/train.py)
+
+--- Dummy 2: random score, uniform 0-1, seed 0 ---
+                      claims fraud all-zero accuracy PR-AUC ROC-AUC frauds in top 100 overall
+Fold A (May)             709    14            98.03%  0.029   0.498                         2
+Fold B (June)            713    22            96.91%  0.052   0.542                         5
+Pooled (May+June)       1422    36            97.47%  0.036   0.525                         5
+Old design (May+June)   1422    36            97.47%  0.035   0.525                         2
+
+FIXED 40 per month, ranked by score  (value [90% interval, 1,000 partner resamples]):
+                      reviewed frauds found      fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)                40   1 [0 to 3]   1,995 [0 to 5,985]           39  -23,225 [-25,600 to -18,475]   -581 [-640 to -462]                       0
+Fold B (June)               40   4 [0 to 8]   4,588 [0 to 9,958]           36  -19,492 [-25,600 to -12,318]   -487 [-640 to -308]                       0
+Pooled (May+June)           80   5 [0 to 9]  6,583 [0 to 12,485]           75  -42,717 [-51,200 to -35,113]   -534 [-640 to -439]                       0
+Old design (May+June)       80   2 [0 to 5]   3,337 [0 to 7,980]           78  -47,103 [-51,200 to -41,700]   -589 [-640 to -521]                       0
+
+FIXED 40 per month, ranked by expected value  (value [90% interval, 1,000 partner resamples]):
+                      reviewed frauds found       fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break places with EV > 0
+Fold A (May)                40   0 [0 to 0]            0 [0 to 0]           40  -25,600 [-25,600 to -25,600]   -640 [-640 to -640]                       0                 40
+Fold B (June)               40   1 [0 to 3]  17,866 [0 to 53,598]           39    -7,354 [-25,600 to 29,138]    -184 [-640 to 728]                       0                 40
+Pooled (May+June)           80   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0                 80
+Old design (May+June)       80   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0                 80
+
+STOP-EARLY: up to 40 per month in expected-value order, stopping when EV <= 0 [DEPENDS ON CALIBRATION: 36 validation frauds is a thin base for trusting p]  (value [90% interval, 1,000 partner resamples]):
+                            reviewed frauds found       fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)           40 [40 to 40]   0 [0 to 0]            0 [0 to 0]           40  -25,600 [-25,600 to -25,600]   -640 [-640 to -640]                       0
+Fold B (June)          40 [40 to 40]   1 [0 to 3]  17,866 [0 to 53,598]           39    -7,354 [-25,600 to 29,138]    -184 [-640 to 728]                       0
+Pooled (May+June)      80 [80 to 80]   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0
+Old design (May+June)  80 [80 to 80]   1 [0 to 3]  17,866 [0 to 53,598]           79    -32,954 [-51,200 to 3,538]     -412 [-640 to 44]                       0
+
+PARTNER RULE: only claims whose partner has partner_rate_ratio > 1, ranked by score, up to 40 per month, never padded [RULE DEFINED AFTER SEEING JUNE; NOT INDEPENDENTLY VALIDATED; ONE MONTH, 8 PARTNERS]: not applicable, no partner eligibility was supplied (it needs partner_rate_ratio; see src/train.py)
+
+Harness check: average over 5,000 different random scores, top 40 per month ranked by score
+  fold_A: mean frauds found 0.780 +/- 0.012 (standard error), range 0 to 5; expected 0.790
+  fold_B: mean frauds found 1.221 +/- 0.015 (standard error), range 0 to 6; expected 1.234
+
+--- Ceiling, not a model: score = the true label. Fixed 40 = the best a full list can do; stop-early = the best achievable (review exactly the true frauds, then stop) ---
+                      claims fraud all-zero accuracy PR-AUC ROC-AUC frauds in top 100 overall
+Fold A (May)             709    14            98.03%  1.000   1.000                        14
+Fold B (June)            713    22            96.91%  1.000   1.000                        22
+Pooled (May+June)       1422    36            97.47%  1.000   1.000                        36
+Old design (May+June)   1422    36            97.47%  1.000   1.000                        36
+
+FIXED 40 per month, ranked by score  (value [90% interval, 1,000 partner resamples]):
+                      reviewed   frauds found             fraud Rs caught genuine held                net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)                40   14 [5 to 26]    21,450 [6,671 to 40,879]           26   1,170 [-17,041 to 25,481]      29 [-426 to 637]                      26
+Fold B (June)               40   22 [8 to 37]   45,673 [13,977 to 85,061]           18   28,433 [-6,878 to 70,628]   711 [-172 to 1,766]                      18
+Pooled (May+June)           80  36 [15 to 61]  67,123 [25,312 to 111,910]           44  29,603 [-19,619 to 81,706]   370 [-245 to 1,021]                      44
+Old design (May+June)       80  36 [15 to 61]  67,123 [25,312 to 111,910]           44  29,603 [-19,619 to 81,706]   370 [-245 to 1,021]                      44
+
+FIXED 40 per month, ranked by expected value  (value [90% interval, 1,000 partner resamples]):
+                      reviewed   frauds found             fraud Rs caught genuine held                net value Rs Rs per claim reviewed places set by tie-break places with EV > 0
+Fold A (May)                40   14 [5 to 26]    21,450 [6,671 to 40,879]           26   1,170 [-17,041 to 25,481]      29 [-426 to 637]                      26                 14
+Fold B (June)               40   22 [8 to 37]   45,673 [13,977 to 85,469]           18   28,433 [-6,878 to 71,285]   711 [-172 to 1,782]                      18                 22
+Pooled (May+June)           80  36 [15 to 61]  67,123 [25,312 to 112,160]           44  29,603 [-19,619 to 82,696]   370 [-245 to 1,034]                      44                 36
+Old design (May+June)       80  36 [15 to 61]  67,123 [25,312 to 112,160]           44  29,603 [-19,619 to 82,696]   370 [-245 to 1,034]                      44                 36
+
+STOP-EARLY: up to 40 per month in expected-value order, stopping when EV <= 0 [DEPENDS ON CALIBRATION: 36 validation frauds is a thin base for trusting p]  (value [90% interval, 1,000 partner resamples]):
+                            reviewed   frauds found             fraud Rs caught genuine held               net value Rs   Rs per claim reviewed places set by tie-break
+Fold A (May)            14 [5 to 26]   14 [5 to 26]    21,450 [6,671 to 40,879]            0   17,810 [5,371 to 33,858]  1,272 [1,032 to 1,475]                       0
+Fold B (June)           22 [8 to 37]   22 [8 to 37]   45,673 [13,977 to 85,469]            0  39,953 [11,052 to 77,191]    1,816 [935 to 4,103]                       0
+Pooled (May+June)      36 [15 to 61]  36 [15 to 61]  67,123 [25,312 to 112,160]            0  57,763 [20,376 to 99,302]  1,605 [1,003 to 2,788]                       0
+Old design (May+June)  36 [15 to 61]  36 [15 to 61]  67,123 [25,312 to 112,160]            0  57,763 [20,376 to 99,302]  1,605 [1,003 to 2,788]                       0
+
+PARTNER RULE: only claims whose partner has partner_rate_ratio > 1, ranked by score, up to 40 per month, never padded [RULE DEFINED AFTER SEEING JUNE; NOT INDEPENDENTLY VALIDATED; ONE MONTH, 8 PARTNERS]: not applicable, no partner eligibility was supplied (it needs partner_rate_ratio; see src/train.py)
+
+--- Simple rule: partner's confirmed frauds in the previous 30 days inside the new regime, labels frozen at the start of the validation month, lag L = 0 days ---
+                      claims fraud all-zero accuracy PR-AUC ROC-AUC frauds in top 100 overall
+Fold A (May)             709    14            98.03%  0.020   0.500                         1
+Fold B (June)            713    22            96.91%  0.546   0.856                        16
+Pooled (May+June)       1422    36            97.47%  0.342   0.718                        16
+Old design (May+June)   1422    36            97.47%  0.025   0.500                         1
+
+FIXED 40 per month, ranked by score  (value [90% interval, 1,000 partner resamples]):
+                      reviewed  frauds found           fraud Rs caught genuine held                  net value Rs Rs per claim reviewed places set by tie-break
+Fold A (May)                40    1 [0 to 3]        1,839 [0 to 3,990]           39  -23,381 [-25,600 to -20,551]   -585 [-640 to -514]                      40
+Fold B (June)               40  16 [3 to 27]  21,879 [5,315 to 37,046]           24     2,359 [-19,145 to 21,327]      59 [-479 to 533]                       9
+Pooled (May+June)           80  17 [5 to 28]  23,718 [6,316 to 39,713]           63     -21,022 [-43,360 to -813]    -263 [-542 to -10]                      49
+Old design (May+June)       80    1 [0 to 5]       1,839 [0 to 11,826]           79  -48,981 [-51,200 to -36,695]   -612 [-640 to -459]                      80
+
+FIXED 40 per month, ranked by expected value: not applicable, this score is not a probability
+
+STOP-EARLY: up to 40 per month in expected-value order, stopping when EV <= 0 [DEPENDS ON CALIBRATION: 36 validation frauds is a thin base for trusting p]: not applicable, this score is not a probability
+
+PARTNER RULE: only claims whose partner has partner_rate_ratio > 1, ranked by score, up to 40 per month, never padded [RULE DEFINED AFTER SEEING JUNE; NOT INDEPENDENTLY VALIDATED; ONE MONTH, 8 PARTNERS]: not applicable, no partner eligibility was supplied (it needs partner_rate_ratio; see src/train.py)
+
+Note on the simple rule: for Fold A and the old design the 30 days before 1 May hold no new-regime claims, so every partner scores 0 and the list is a random draw. Only Fold B can use it.
