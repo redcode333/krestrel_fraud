@@ -92,7 +92,7 @@ Break-even for the whole list is 34.6%. If only Outlets A and B disappoint, the 
 
 ## B3. What one prediction costs
 
-**API cost: Rs 0.** The model is a small logistic formula run locally; no paid service or key is used at any point. Scoring is under a millisecond per claim; the measured times are in `reports/timing.txt`, the one report that varies between runs. Model files: `model.joblib` 1,542 bytes, `constants.json` 5,117 bytes, partner profile 27,056 bytes.
+**API cost: Rs 0.** The model is a small logistic formula run locally; no paid service or key is used at any point. Scoring is under a millisecond per claim; the measured times and the size of the model files are in `reports/timing.txt`, the one report that varies between runs.
 
 **This is not the cost of a review.** A review is a person's work and a contact with the customer: Rs 260 for every reviewed claim, plus Rs 380 in goodwill when the claim turns out to be genuine. With up to 40 reviews a month that is up to Rs 10,400 a month in contact cost alone. Scoring all 750 claims is free; reviewing is where the money goes.
 

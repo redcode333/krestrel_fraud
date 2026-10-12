@@ -50,6 +50,31 @@ def test_three_examples_use_the_loaded_profile_and_show_the_three_bands():
     assert [post(e["claim"]).json()["band"] for e in examples] == ["Review", "Normal", "Watch"]
 
 
+def test_new_outlet_example_scores_like_a_real_claim_without_history():
+    # The highest real score among test claims from outlets with no decided history is 0.552 (reports/rupees.md, section C).
+    example = client.get("/examples").json()[2]
+    state = PARTNERS[example["claim"]["partner_id"]]
+    assert state["is_new_partner"] == 1 and state["decided_new_claims"] == 0
+    assert 0.35 <= post(example["claim"]).json()["score"] <= 0.55
+
+
+def test_unknown_partner_gets_exactly_the_new_outlet_treatment():
+    """An unknown partner ID is scored as a new outlet with no history and no recent claims: nothing more, nothing less."""
+    example = client.get("/examples").json()[2]["claim"]
+    known_new = PARTNERS[example["partner_id"]]
+    unknown = claim(**{**example, "partner_id": "OUTLET-NOT-IN-PROFILE"})
+    features, ratio, _ = scoring.claim_features(unknown)
+    assert features["is_new_partner"] == 1.0 and ratio == 1.0
+    by_reason = lambda record, partner=None: {r["reason"]: r["contribution"] for r in scoring.explain(record, partner)["reasons"]}
+    as_unknown, as_known = by_reason(unknown), by_reason(example)
+    # Same outlet-age line and same (empty) fraud record as a known new outlet; only recent activity can differ.
+    assert as_unknown["outlet_age"] == as_known["outlet_age"] > 0 and as_unknown["partner_record"] == as_known["partner_record"] == 0
+    assert {k for k in as_unknown if as_unknown[k] != as_known[k]} <= {"partner_activity"}
+    # Give the known new outlet the same (zero) recent activity and the two scores are identical.
+    quiet = {**known_new, "claims_last_7d": 0.0, "claims_last_30d": 0.0, "small_share_last_30d": 0.0, "avg_amount_last_30d": 0.0}
+    assert scoring.score_claim(example, quiet) == post(unknown).json()["score"]
+
+
 def test_a_good_claim_returns_everything_the_brief_asks_for():
     response = post(claim())
     body = response.json()

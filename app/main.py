@@ -68,10 +68,12 @@ def example_claims():
          max(ordinary, key=lambda p: (p["decided_new_claims"], p["partner_id"])) if ordinary else None,
          {"sku": "KH-WP-01", "product_serial": "KH305518842", "days_since_purchase": 150, "claim_amount_inr": 3200,
           "photo_attached": "Y", "customer_prior_claims": 0}),
+        # Made up to resemble the highest-scoring real claims from outlets with no decided history (they score up to 0.552).
+        # The outlet is chosen by its activity, not its ID, so the real and the example profile pick the same one.
         ("New outlet", "A recently onboarded outlet with no decided claims yet.",
-         max(new, key=lambda p: (p["claims_last_30d"], p["partner_id"])) if new else None,
-         {"sku": "KH-RH-02", "product_serial": "kh-771204963", "days_since_purchase": 120, "claim_amount_inr": 1850,
-          "photo_attached": "N", "customer_prior_claims": 2}),
+         max(new, key=lambda p: (p["claims_last_30d"], p["claims_last_7d"], p["avg_amount_last_30d"], p["partner_id"])) if new else None,
+         {"sku": "KH-RH-01", "product_serial": "kh-771204963", "days_since_purchase": 215, "claim_amount_inr": 1400,
+          "photo_attached": "Y", "customer_prior_claims": 1}),
     ]
     return [{"label": label, "description": description,
              "claim": {"claim_id": f"EXAMPLE-{i + 1}", "submitted_at": "2026-10-05 11:20", "partner_id": partner["partner_id"], **fields}}

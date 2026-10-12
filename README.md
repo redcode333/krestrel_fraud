@@ -5,9 +5,18 @@ Kestrel Home asked for a model that flags fraudulent warranty claims before they
 - a **service** that scores one claim, says what to do with it and why (`app/`),
 - the **scores for the 2,252 test claims** (`predictions.csv`),
 - the **pipeline** that produced the model, with its evidence (`src/`, `reports/`),
-- the **memo** to the client (`memo.md`) and the log of every decision and discarded approach (`AI_LOG.md`).
+- the **memo** to the client (`memo.pdf`) and the log of every decision and discarded approach (`AI_LOG.md`).
+
+## Where to read first
+
+- [`memo.pdf`](memo.pdf) - one page for Ritu Deshpande: the decision, the rupees, what to do next week, the limits.
+- [`reports/memo_sources.md`](reports/memo_sources.md) - where each figure in the memo comes from, report by report.
+- [`reports/evaluation.md`](reports/evaluation.md) - what was tested and how, the results with intervals, how often it does not work, and five missed frauds and five false alarms chosen by a rule fixed in advance.
+- [`reports/rupees.md`](reports/rupees.md) - what a review costs and recovers, break-even, sensitivity, the watchlist as Outlet A to J.
 
 The service needs no paid API, no key and no data. It starts from this README on a clean machine.
+
+"Outlet" and "partner" mean the same thing throughout this repository: a service partner that submits claims.
 
 ## Run the service
 
@@ -21,7 +30,9 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-If `python` is not version 3.12 or newer, use `py -3.12 -m venv .venv` for the first line.
+Use `python` if `python --version` shows 3.12 or newer (3.12 and 3.14 were tested).
+
+If port 8000 is busy, add `--port 8001` to the last command in place of `--port 8000` and open that port instead.
 
 **macOS or Linux**
 
@@ -151,20 +162,74 @@ The service tests (one per edge case above, plus a check that the service return
 
 ## Rebuild everything from the data pack
 
-With the data pack in `data/`:
+**1. Put the data pack in `data/` under these exact names.** The scripts read `train.csv`, `test_unlabelled.csv`, `partners.csv` and `products.csv`, and the submission check reads `sample_submission.csv`. The pack as delivered had an ID prefix on every file name (for example `<id>-train.csv`), so the files must be renamed first.
+
+**2. Two environments.** `.venv`, the one created under "Run the service", runs the service and every script except one. `src/train.py` compares one model that needs LightGBM, so it alone uses a second environment, `.venv-dev`. Create it once (Windows):
 
 ```
-python src/clean.py                  cleaned claims
-python src/explore.py                reports/explore.txt
-python src/evaluate.py               reports/evaluate_harness.txt
-python src/features.py               reports/features.txt, with the leakage tests
-python src/train.py                  reports/train.txt (needs requirements-dev.txt: LightGBM, for one comparison model)
-python src/final.py                  the model, constants, partner profiles, predictions.csv, reports/final.txt
-python src/validate_submission.py    checks predictions.csv
-python src/rupees.py                 reports/rupees.md and reports/timing.txt
+python -m venv .venv-dev
+.venv-dev\Scripts\python -m pip install -r requirements-dev.txt
 ```
 
-Every bootstrap and tie-break uses a fixed seed (`BOOTSTRAP_SEED` in `src/evaluate.py`), so two runs give identical reports, intervals, `predictions.csv` and model files. **The one exception is `reports/timing.txt`**: it holds the measured scoring time, which depends on the machine and the moment, so that file alone varies between runs.
+On macOS or Linux use `python3` and `.venv-dev/bin/python`, and `.venv/bin/python` in the commands below.
+
+**3. Run the scripts in this order,** from the repository root (Windows).
+
+Clean the claims (one row per claim, undecided claims set aside):
+
+```
+.venv\Scripts\python src\clean.py
+```
+
+Explore the data; writes `reports/explore.txt`:
+
+```
+.venv\Scripts\python src\explore.py
+```
+
+Self-test of the evaluation harness; writes `reports/evaluate_harness.txt`:
+
+```
+.venv\Scripts\python src\evaluate.py
+```
+
+Build the features and run the leakage tests; writes `reports/features.txt`:
+
+```
+.venv\Scripts\python src\features.py
+```
+
+Compare the models; writes `reports/train.txt`. This is the one script that uses `.venv-dev`:
+
+```
+.venv-dev\Scripts\python src\train.py
+```
+
+Build the final model, the constants, the partner profiles and `predictions.csv`; writes `reports/final.txt`:
+
+```
+.venv\Scripts\python src\final.py
+```
+
+Check `predictions.csv` against the sample submission:
+
+```
+.venv\Scripts\python src\validate_submission.py
+```
+
+Rupee analysis; writes `reports/rupees.md` and `reports/timing.txt`:
+
+```
+.venv\Scripts\python src\rupees.py
+```
+
+Evaluation write-up; writes `reports/evaluation.md`:
+
+```
+.venv\Scripts\python src\evaluation_report.py
+```
+
+Every bootstrap and tie-break uses a fixed seed (`BOOTSTRAP_SEED` in `src/evaluate.py`), so two runs give identical reports, intervals, `predictions.csv` and model files. **The one exception is `reports/timing.txt`**: it holds the measured scoring time, which depends on the machine and the moment, and the size of the model files on disk, which depends on line endings, so that file alone varies between runs and machines.
 
 ## What the review list depends on
 
@@ -178,12 +243,12 @@ The recommended review list (claims whose partner has confirmed fraud above the 
 ## Layout
 
 - `app/` - the service: `main.py` (endpoint) and `page.html` (the one screen)
-- `src/` - `scoring.py` (score, explain and band for one claim; the only code the service uses), data preparation (`clean.py`), exploration, evaluation harness, features, model comparison (`train.py`), final model (`final.py`), rupee analysis (`rupees.py`), submission check (`validate_submission.py`)
+- `src/` - `scoring.py` (score, explain and band for one claim; the only code the service uses), data preparation (`clean.py`), exploration, evaluation harness, features, model comparison (`train.py`), final model (`final.py`), rupee analysis (`rupees.py`), evaluation write-up (`evaluation_report.py`), submission check (`validate_submission.py`)
 - `scripts/` - `build_partner_profile.py`
 - `tests/` - service tests, submission checks, pipeline checks
 - `models/` - `model.joblib`, `constants.json`, `partner_profile.example.csv` (summaries only, no customer rows)
 - `reports/` - evidence, with partner IDs masked; `reports/raw/` holds the unmasked copies and is git-ignored
 - `data/` - the client data pack (git-ignored, never committed)
 - `predictions.csv` - claim_id,score for every row of test_unlabelled.csv
-- `memo.md` - one-page memo to Ritu
+- `memo.pdf` - one-page memo to Ritu
 - `AI_LOG.md` - decisions and discarded approaches

@@ -34,5 +34,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Private working notes for the submission form; kept on disk, not part of the repository
+FORM_NOTES.md
+
 # predictions.csv is a deliverable and must be committed
 !/predictions.csv

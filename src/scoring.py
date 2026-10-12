@@ -465,9 +465,13 @@ def _pick_reasons(explained, band):
     return [{"text": r["text"], "effect": r["effect"]} for r in chosen]
 
 
-def assess(claim):
-    """What the service returns for one claim: score, risk band, whether the review rule applies, reasons, notes."""
-    ctx = _context(claim)
+def assess(claim, partner=None):
+    """What the service returns for one claim: score, risk band, whether the review rule applies, reasons, notes.
+
+    partner   the partner's state, as in claim_features. The service never passes it; reports use it to show a past
+              claim with the outlet's record as it stood at the time.
+    """
+    ctx = _context(claim, partner)
     explained = _explain(ctx)
     band = risk_band(explained["review_recommended"], explained["partner_has_history"], explained["score"], ctx["constants"])
     return {

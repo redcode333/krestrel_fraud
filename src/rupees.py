@@ -4,7 +4,8 @@ Writes:
   reports/rupees.md             assumptions, June list values, break-even table, monthly scaling, sensitivity,
                                 cost per prediction, cold start, and the watchlist as Outlet A to J
                                 (partner IDs masked; committed; reproduces exactly between runs)
-  reports/timing.txt            measured scoring time. THE ONLY report that varies between runs.
+  reports/timing.txt            measured scoring time and the size of the model files on disk. THE ONLY report that
+                                varies between runs and machines (file sizes depend on line endings).
   reports/raw/rupees.md         the same with real partner IDs (git-ignored)
   reports/raw/watchlist.csv     the 10 flagged outlets with real partner IDs (git-ignored)
   reports/raw/review_list.csv   per month, the top 40 claims by score and the review-rule list (git-ignored)
@@ -258,14 +259,17 @@ def sensitivity_rows(frame, wl, fraud_amount):
     return rows, n_ab, n_other
 
 
-def timing_report(timings, n_timed):
+def timing_report(timings, n_timed, sizes):
     mean_ms = timings["score with reasons (explain)"][0]
     lines = ["Scoring time (src/rupees.py). THIS FILE VARIES BETWEEN RUNS AND MACHINES; every other report reproduces exactly.", "",
              f"Measured by scoring {n_timed:,} single claims one at a time through src/scoring.py, after the model files were loaded once.", "",
              f"{'what was timed':<32}{'mean ms':>10}{'p95 ms':>10}{'slowest ms':>12}"]
     lines += [f"{name:<32}{t[0]:>10.3f}{t[1]:>10.3f}{t[2]:>12.3f}" for name, t in timings.items()]
     lines += ["", f"A month of about 750 claims is about {750 * mean_ms / 1000:.2f} seconds of computing, reasons included.",
-              "API cost: Rs 0. No paid service or key is used.", ""]
+              "API cost: Rs 0. No paid service or key is used.", "",
+              "Model files on disk (bytes; the count depends on line endings, so it can differ between machines):"]
+    lines += [f"  {name:<24}{size:>10,}" for name, size in sizes.items()]
+    lines += [""]
     return "\n".join(lines)
 
 
@@ -287,7 +291,7 @@ def main():
     ab_zero = n_ab * net_per_review(0.0, a14["fraud_amount"]) + n_other * net_per_review(JUNE_RATE, a14["fraud_amount"])
     losing = [r for r in SENSITIVITY_RATES if (n_ab + n_other) * net_per_review(r, a14["fraud_amount"]) < 0]
     losing_at = f"{max(losing):.0%} or below" if losing else "any rate in the table, it still pays; none of them"
-    write_masked_file("timing.txt", timing_report(timings, n_timed))
+    write_masked_file("timing.txt", timing_report(timings, n_timed, sizes))
     slowest_p95 = max(t[1] for t in timings.values())
     speed = ("under a millisecond per claim" if slowest_p95 < 1 else "a few milliseconds per claim at most" if slowest_p95 < 10
              else "measured in the timing file")
@@ -346,9 +350,8 @@ def main():
            f"outlets carry it at June's rate. If ALL flagged outlets fall to {losing_at} the list loses money.", "",
            "## B3. What one prediction costs", "",
            f"**API cost: Rs 0.** The model is a small logistic formula run locally; no paid service or key is used at any point. Scoring is "
-           f"{speed}; the measured times are in `reports/timing.txt`, the one report that varies between runs. "
-           f"Model files: `model.joblib` {sizes['model.joblib']:,} bytes, `constants.json` {sizes['constants.json']:,} bytes, partner profile "
-           f"{sizes['partner_profile.csv']:,} bytes.", "",
+           f"{speed}; the measured times and the size of the model files are in `reports/timing.txt`, the one report that "
+           "varies between runs.", "",
            "**This is not the cost of a review.** A review is a person's work and a contact with the customer: Rs 260 for every reviewed "
            "claim, plus Rs 380 in goodwill when the claim turns out to be genuine. With up to 40 reviews a month that is up to "
            f"Rs {rs(REVIEWS_PER_MONTH * CONTACT_RS)} a month in contact cost alone. Scoring all 750 claims is free; reviewing is where the money goes.", "",
