@@ -1,0 +1,5 @@
+# Tests only:  pip install -r requirements-test.txt  then  python -m pytest
+# The app and the final model do not need anything in this file.
+-r requirements.txt
+pytest==9.1.1
+httpx2==2.13.1

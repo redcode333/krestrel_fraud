@@ -41,6 +41,8 @@
     "before_may_established_frauds": 105,
     "period": "decided claims first submitted 1 May to 30 Jun 2026"
   },
+  "watch_rank": 100,
+  "watch_score_threshold": 0.3363402837044388,
   "products": {
     "KH-AF-01": {
       "family": "Air Fryer",

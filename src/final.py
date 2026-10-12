@@ -42,6 +42,7 @@ MODELS = ROOT / "models"
 PREDICTIONS = ROOT / "predictions.csv"
 EXPECTED_TRAIN = (11146, 141)        # labelled claims and frauds up to 30 Jun 2026
 EXPECTED_HISTORY = (1422, 36)        # decided new-regime claims and frauds in the frozen history
+WATCH_RANK = 100                     # the service's Watch band starts at the score of the 100th highest test claim
 FINAL_NAME, BASE_NAME, PREVIOUS_NAME = SHORT[FINAL], SHORT[FINAL_BASE], SHORT[PREVIOUS_FINAL]
 # The author's judgement for the form, NOT computed: a point guess shaded below the June figure. The range around it IS computed.
 POINT_GUESS_PR_AUC = (0.30, 0.35)
@@ -380,6 +381,8 @@ def save_artifacts(fit, slope, intercept):
         "history_frozen_on": "2026-06-30", "history_lag_days": FINAL_L, "profile_date": "2026-09-30",
         "profile_as_of": PROFILE_AS_OF.isoformat(), "overall_new_regime_rate": overall, "smoothing_k": SMOOTH_K,
         "min_new_decided": MIN_NEW_DECIDED, "cohort": cohort,
+        # Watch band: a claim from an outlet with no decided history whose score would be in the top 100 of the test claims.
+        "watch_rank": WATCH_RANK, "watch_score_threshold": float(np.sort(fit["p"])[::-1][WATCH_RANK - 1]),
         "products": {r["sku"]: {"family": r["family"], "list_price_inr": float(r["list_price_inr"]), "warranty_months": int(r["warranty_months"])}
                      for _, r in products.iterrows()},
         "categories": reference_categories(),
@@ -405,6 +408,7 @@ def save_artifacts(fit, slope, intercept):
           f"{cohort['established_outlet_claims']:,} ({cohort['established_outlet_fraud_rate']:.1%}); "
           f"{cohort['new_outlets_without_fraud']} of {cohort['new_outlets']} new outlets have no confirmed fraud. Before 1 May, "
           f"{cohort['before_may_established_frauds']} of the {cohort['before_may_frauds']} confirmed frauds came from established outlets.")
+    print(f"  Watch band threshold for the service: the score of the {WATCH_RANK}th highest test claim, {constants['watch_score_threshold']:.4f}.")
     print("src/scoring.py: claim_features(claim) builds the features for ONE claim from the partner profile; score_claim and explain "
           "use it. The app must import these and nothing else from the pipeline.")
     return profile

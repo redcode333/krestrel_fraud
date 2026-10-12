@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestrel claim review</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d2327; --muted: #5b6770; --line: #d9d6cd; --accent: #1f5f6b; --accent-ink: #ffffff;
+    --review-bg: #fbe4de; --review-ink: #8a1f0d; --watch-bg: #fbeecb; --watch-ink: #6e4a00; --normal-bg: #e1efe4; --normal-ink: #1e5a2c;
+    --error-bg: #fdecea; --error-ink: #8a1f0d; --field: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181b; --card: #1d2327; --ink: #e9ecee; --muted: #a3adb4; --line: #37424a; --accent: #6cc0cf; --accent-ink: #0d1b1e;
+      --review-bg: #4a1d15; --review-ink: #ffc9bd; --watch-bg: #4a3a0d; --watch-ink: #ffe29a; --normal-bg: #173a22; --normal-ink: #bfe8c8;
+      --error-bg: #4a1d15; --error-ink: #ffc9bd; --field: #14181b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  p { margin: 0 0 12px; }
+  .lede { color: var(--muted); max-width: 62ch; }
+  .profile { font-size: 0.875rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; margin: 12px 0 20px; }
+  .profile strong { color: var(--ink); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--ink); padding: 8px 14px; }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; padding: 10px 22px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 16px; }
+  label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; }
+  .hint { display: block; font-weight: 400; color: var(--muted); font-size: 0.8125rem; }
+  input, select { width: 100%; font: inherit; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  input.bad, select.bad { border-color: var(--error-ink); box-shadow: 0 0 0 2px var(--error-bg); }
+  .actions { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .small { font-size: 0.8125rem; color: var(--muted); }
+  .error { background: var(--error-bg); color: var(--error-ink); border-radius: 8px; padding: 12px 14px; }
+  .band { display: inline-block; font-weight: 700; letter-spacing: 0.02em; border-radius: 999px; padding: 4px 14px; }
+  .band.Review { background: var(--review-bg); color: var(--review-ink); }
+  .band.Watch { background: var(--watch-bg); color: var(--watch-ink); }
+  .band.Normal { background: var(--normal-bg); color: var(--normal-ink); }
+  .headline { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+  .score { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  ul { margin: 0 0 14px; padding-left: 0; list-style: none; }
+  li { padding: 8px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  li:first-child { border-top: 0; }
+  .mark { flex: 0 0 5.5rem; font-size: 0.8125rem; font-weight: 600; color: var(--muted); padding-top: 2px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kestrel claim review</h1>
+  <p class="lede">Score one warranty claim before it is paid. The score ranks claims by fraud risk; the band says what to do with this one.</p>
+  <p class="profile" id="profile"></p>
+
+  <div class="card" id="unready" hidden>
+    <p class="error" id="unready-text"></p>
+  </div>
+
+  <div class="card" id="form-card">
+    <h2>Try an example</h2>
+    <div class="examples" id="examples"></div>
+    <p class="small" id="example-note">Example outlets are picked from the partner profile that is loaded.</p>
+
+    <h2 style="margin-top:18px">Claim</h2>
+    <form id="claim" novalidate>
+      <div class="grid">
+        <div><label for="partner_id">Partner ID <span class="hint">the outlet that submitted the claim</span></label><input id="partner_id" name="partner_id" autocomplete="off"></div>
+        <div><label for="sku">Product SKU <span class="hint">for example KH-MG-02</span></label><input id="sku" name="sku" list="skus" autocomplete="off"><datalist id="skus"></datalist></div>
+        <div><label for="claim_amount_inr">Claim amount (Rs)</label><input id="claim_amount_inr" name="claim_amount_inr" inputmode="decimal"></div>
+        <div><label for="days_since_purchase">Days since purchase</label><input id="days_since_purchase" name="days_since_purchase" inputmode="numeric"></div>
+        <div><label for="customer_prior_claims">Customer's earlier claims</label><input id="customer_prior_claims" name="customer_prior_claims" inputmode="numeric"></div>
+        <div><label for="photo_attached">Photo attached</label><select id="photo_attached" name="photo_attached"><option value="Y">Y</option><option value="N">N</option></select></div>
+        <div><label for="submitted_at">Submitted at <span class="hint">like 2026-10-05 11:20 (IST)</span></label><input id="submitted_at" name="submitted_at" autocomplete="off"></div>
+        <div><label for="product_serial">Product serial <span class="hint">accepted, not used by the model</span></label><input id="product_serial" name="product_serial" autocomplete="off"></div>
+        <div><label for="claim_id">Claim ID <span class="hint">optional</span></label><input id="claim_id" name="claim_id" autocomplete="off"></div>
+      </div>
+      <div class="actions">
+        <button class="primary" type="submit" id="go">Score</button>
+        <span class="small">Sends this one record to <code>POST /score</code>. Nothing is stored.</span>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" id="problem" hidden role="alert"><p class="error" id="problem-text"></p></div>
+
+  <div class="card" id="result" hidden aria-live="polite">
+    <div class="headline">
+      <span class="band" id="band"></span>
+      <span class="score" id="score"></span>
+      <span class="small">score, indicative only</span>
+    </div>
+    <p id="band-meaning"></p>
+    <h2>Why</h2>
+    <ul id="reasons"></ul>
+    <div id="notes-block" hidden>
+      <h2>Notes</h2>
+      <ul id="notes"></ul>
+    </div>
+    <p class="small" id="score-label"></p>
+    <p class="small" id="details"></p>
+  </div>
+</main>
+
+<script id="config" type="application/json">__CONFIG__</script>
+<script>
+  const config = JSON.parse(document.getElementById("config").textContent);
+  const fields = ["partner_id", "sku", "claim_amount_inr", "days_since_purchase", "customer_prior_claims", "photo_attached", "submitted_at", "product_serial", "claim_id"];
+  const numeric = ["claim_amount_inr", "days_since_purchase", "customer_prior_claims"];
+  const el = (id) => document.getElementById(id);
+  const show = (id, on) => { el(id).hidden = !on; };
+
+  el("profile").textContent = "";
+  if (config.ready) {
+    const strong = document.createElement("strong");
+    strong.textContent = "Partner profile loaded: " + config.profile + ".";
+    el("profile").append(strong, " Using the " + config.profile_note + ". Fraud history is frozen on " + config.history_frozen_on +
+      "; partner activity is as of " + config.activity_as_of + ".");
+  } else {
+    show("unready", true); show("form-card", false);
+    el("unready-text").textContent = "The service started but cannot score yet: " + config.problem;
+  }
+  for (const sku of config.skus) { const o = document.createElement("option"); o.value = sku; el("skus").append(o); }
+
+  function fill(claim) {
+    for (const name of fields) el(name).value = claim[name] === undefined ? "" : String(claim[name]);
+    clearMarks(); show("problem", false);
+  }
+  function clearMarks() { for (const name of fields) el(name).classList.remove("bad"); }
+
+  for (const example of config.examples) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = example.label; b.title = example.description;
+    b.addEventListener("click", () => { fill(example.claim); submit(); });
+    el("examples").append(b);
+  }
+  if (config.examples.length) fill(config.examples[0].claim);
+
+  function readClaim() {
+    const claim = {};
+    for (const name of fields) {
+      const raw = el(name).value.trim();
+      if (raw === "") continue;                       // a missing field is reported by the service, which names it
+      claim[name] = numeric.includes(name) && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : raw;
+    }
+    return claim;
+  }
+
+  async function submit() {
+    clearMarks(); show("problem", false);
+    el("go").disabled = true;
+    try {
+      const response = await fetch("/score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(readClaim()) });
+      const body = await response.json();
+      if (!response.ok) {
+        el("problem-text").textContent = body.error || "The claim could not be scored.";
+        for (const name of body.fields || []) if (el(name)) el(name).classList.add("bad");
+        show("problem", true); show("result", false);
+        if (body.field && el(body.field)) el(body.field).focus();
+        return;
+      }
+      render(body);
+    } catch (error) {
+      el("problem-text").textContent = "The service did not answer. Is it still running?";
+      show("problem", true); show("result", false);
+    } finally {
+      el("go").disabled = false;
+    }
+  }
+
+  function render(body) {
+    el("band").textContent = body.band; el("band").className = "band " + body.band;
+    el("score").textContent = body.score.toFixed(3);
+    el("band-meaning").textContent = body.band_meaning;
+    el("reasons").replaceChildren(...body.reasons.map((r) => item(r.effect, r.text)));
+    el("notes").replaceChildren(...body.notes.map((n) => item("note", n)));
+    show("notes-block", body.notes.length > 0);
+    el("score-label").textContent = body.score_label;
+    const d = body.details;
+    el("details").textContent = "Partner's confirmed fraud rate relative to the average: " + d.partner_rate_ratio.toFixed(1) + "x" +
+      (d.partner_has_history ? "" : " (no decided claims, so it is set to 1.0)") + ". A review of this claim would pay for itself only above a " +
+      Math.round(d.break_even_probability * 100) + "% chance of fraud.";
+    show("result", true);
+    el("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function item(mark, text) {
+    const li = document.createElement("li"), m = document.createElement("span"), t = document.createElement("span");
+    m.className = "mark"; m.textContent = mark; t.textContent = text; li.append(m, t); return li;
+  }
+  el("claim").addEventListener("submit", (event) => { event.preventDefault(); submit(); });
+</script>
+</body>
+</html>

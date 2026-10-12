@@ -147,12 +147,13 @@ models/partner_profile.example.csv (committed): the same rows with masked partne
 models/constants.json: costs (Rs 380, Rs 260), expected-value and break-even formulas, the review rule and its label, the product catalogue, the category lists and the cohort statistics quoted in explanations.
   The ONE definition used everywhere: new outlets = outlets onboarded on or after 1 Oct 2025 with at least one decided claim first submitted on or after 1 May 2026: 45, of which 8 have a confirmed fraud and 37 have none.
   new outlets: 34 frauds in 211 decided claims after 1 May (16.1%); established outlets: 2 in 1,211 (0.2%); 37 of 45 new outlets have no confirmed fraud. Before 1 May, 105 of the 105 confirmed frauds came from established outlets.
+  Watch band threshold for the service: the score of the 100th highest test claim, 0.3363.
 src/scoring.py: claim_features(claim) builds the features for ONE claim from the partner profile; score_claim and explain use it. The app must import these and nothing else from the pipeline.
 
 ====================================================================================================
 Checks: the one-claim function reproduces predictions.csv, and explanations follow the rules
 ====================================================================================================
-PASS: for all 2,252 test claims, the one-claim function given the partner's state at the time of the claim rebuilds every feature (largest difference 0.0e+00) and the score in predictions.csv (largest difference 5.6e-16).
+PASS: for all 2,252 test claims, the one-claim function given the partner's state at the time of the claim rebuilds every feature (largest difference 0.0e+00) and the score in predictions.csv (largest difference 3.9e-16).
 PASS: 4,504 explanations checked (each claim with its state at the time and with the stored profile). None names a city or a partner type or says 'new partner'; every reason is one of ['auto_approval', 'claim_amount', 'customer', 'outlet_age', 'partner_activity', 'partner_record', 'photo', 'product']; the reasons and the baseline add up to the score.
 Outlet age is explained with one line carrying its group statistics; city and partner type are not in the model at all.
 What the app will do differently: it reads partner activity as of 30 Sep 2026 from the profile, not as of the claim's date. Re-entering an old test claim in the app therefore gives a slightly different score: median difference 0.0011, largest 0.3314, rank correlation with predictions.csv 0.972. predictions.csv is the submission; the app is for new claims.
